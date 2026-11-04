@@ -5,6 +5,19 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 2
+
+- Anmelden, Registrieren mit E-Mail-Bestätigung (erneut senden), Passwort vergessen und neu setzen
+- Profil anzeigen und bearbeiten (Anzeige- und Benutzername), Profilbild-Upload in den privaten
+  Bucket `avatars` (vorher auf 512 px verkleinert), Abmelden auch ohne Netz
+- Weiterleitung je nach Anmeldestatus wie `auth_redirect.dart`; Fehlertexte und Eingabeprüfungen
+  1:1 aus `error_mapper.dart` und `validators.dart`
+- Ohne Supabase-Konfiguration zeigt die App einen Einrichtungshinweis
+
+**iPhone-Hinweis:** Links aus Bestätigungs- und Passwort-Mails öffnen sich in Safari, nicht in der
+App vom Home-Bildschirm (getrennter Speicher). Nach dem Bestätigen meldet man sich in der App
+einfach mit E-Mail und Passwort an.
+
 ## Stand Phase 1
 
 - App-Hülle mit den fünf Bereichen der Flutter-App (Übersicht, Karte, Gruppe, Chat, Profil):
@@ -14,7 +27,6 @@ unverändert die Rückfallebene.
   Installationsanleitung für iPhone und Android
 - Supabase-Konfiguration mit derselben Prüfung wie die Flutter-App (lehnt Service-Role-Keys ab,
   baut ohne gültige Werte keine Scheinverbindung auf)
-- Die Bereiche selbst folgen ab Phase 2 (Anmeldung und Profil)
 
 ## Aufbau
 
@@ -40,6 +52,10 @@ npm run lint && npm run typecheck && npm test
 npm run build && npx vite preview --port 4180 &
 NODE_PATH=$(npm root -g) npm run e2e   # Rauchtest mit Playwright
 ```
+
+Ende-zu-Ende gegen eine lokale Datenbank mit allen Migrationen (siehe Kopf von
+`e2e/auth-local.mjs`): `supabase start` im Repository, App mit dessen URL und Key bauen, dann
+`node e2e/auth-local.mjs`. Läuft auch in der CI.
 
 ## Veröffentlichung
 

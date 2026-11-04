@@ -3,15 +3,27 @@ import { createRoot } from 'react-dom/client';
 import { registerSW } from 'virtual:pwa-register';
 import { App } from './app/App';
 import { createAppRouter } from './app/router';
+import { SetupPage } from './app/SetupPage';
+import { createSupabaseAuthService } from './features/auth/authService';
+import { createSupabaseProfileService } from './features/profile/profileService';
+import { supabase } from './lib/supabase';
 import './styles/index.css';
 
 registerSW({ immediate: true });
 
 // BASE_URL ist "/" lokal und "/drueckjagdApp/app/" auf GitHub Pages.
-const router = createAppRouter({ basepath: import.meta.env.BASE_URL.replace(/\/$/, '') || '/' });
+const base = import.meta.env.BASE_URL;
+const appUrl = new URL(base, window.location.origin).toString();
+const root = createRoot(document.getElementById('root')!);
 
-createRoot(document.getElementById('root')!).render(
-  <StrictMode>
-    <App router={router} />
-  </StrictMode>,
-);
+if (!supabase) {
+  root.render(<SetupPage />);
+} else {
+  const services = { auth: createSupabaseAuthService(supabase, appUrl), profiles: createSupabaseProfileService(supabase) };
+  const router = createAppRouter({ basepath: base.replace(/\/$/, '') || '/' });
+  root.render(
+    <StrictMode>
+      <App router={router} services={services} />
+    </StrictMode>,
+  );
+}

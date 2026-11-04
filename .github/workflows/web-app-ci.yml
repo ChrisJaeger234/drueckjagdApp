@@ -41,3 +41,34 @@ jobs:
           (BASE_PATH=/drueckjagdApp/app/ npx vite preview --port 4180 --strictPort &)
           npx -y wait-on@8 http://localhost:4180/drueckjagdApp/app/
           NODE_PATH=$(npm root -g) APP_URL=http://localhost:4180/drueckjagdApp/app/ npm run e2e
+
+  # Anmeldung, Profil und Profilbild gegen einen lokalen Supabase-Stack mit allen
+  # Migrationen aus supabase/ (keine Verbindung zum Produktivprojekt).
+  e2e-supabase:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web-app/package-lock.json
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Lokalen Supabase-Stack starten
+        run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
+      - name: App gegen den lokalen Stack bauen
+        working-directory: web-app
+        run: |
+          eval "$(supabase status -o env | grep -E '^(API_URL|PUBLISHABLE_KEY)=')"
+          npm ci
+          VITE_SUPABASE_URL="$API_URL" VITE_SUPABASE_PUBLISHABLE_KEY="$PUBLISHABLE_KEY" npx vite build --outDir /tmp/wa-local
+      - name: Ende-zu-Ende-Test (Playwright)
+        working-directory: web-app
+        run: |
+          npm install -g playwright@1
+          npx -y playwright@1 install --with-deps chromium
+          (npx vite preview --outDir /tmp/wa-local --port 4181 --strictPort &)
+          npx -y wait-on@8 http://localhost:4181/
+          NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/auth-local.mjs

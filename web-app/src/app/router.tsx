@@ -1,23 +1,40 @@
-import { createRootRoute, createRoute, createRouter } from '@tanstack/react-router';
+import { createRootRoute, createRoute, createRouter, type RouterHistory } from '@tanstack/react-router';
+import { ForgotPasswordPage } from '../features/auth/ForgotPasswordPage';
+import { LoginPage } from '../features/auth/LoginPage';
+import { NewPasswordPage } from '../features/auth/NewPasswordPage';
+import { RegisterPage } from '../features/auth/RegisterPage';
 import { ChatPage } from '../features/chat/ChatPage';
 import { GroupsPage } from '../features/groups/GroupsPage';
 import { MapPage } from '../features/map/MapPage';
 import { OverviewPage } from '../features/overview/OverviewPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
 import { AppShell } from './AppShell';
+import { AuthGate } from './AuthGate';
 import { NotFound } from './NotFound';
 
-const rootRoute = createRootRoute({ component: AppShell, notFoundComponent: NotFound });
+const rootRoute = createRootRoute({ component: AuthGate, notFoundComponent: NotFound });
+
+// Bereiche mit Hauptnavigation (nur angemeldet, siehe AuthGate).
+const shellRoute = createRoute({ getParentRoute: () => rootRoute, id: 'shell', component: AppShell });
+const inShell = <P extends string>(path: P, component: () => React.JSX.Element) => createRoute({ getParentRoute: () => shellRoute, path, component });
+
+const authRoute = <P extends string>(path: P, component: () => React.JSX.Element) => createRoute({ getParentRoute: () => rootRoute, path, component });
 
 export const routeTree = rootRoute.addChildren([
-  createRoute({ getParentRoute: () => rootRoute, path: '/', component: OverviewPage }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/karte', component: MapPage }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/gruppe', component: GroupsPage }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/chat', component: ChatPage }),
-  createRoute({ getParentRoute: () => rootRoute, path: '/profil', component: ProfilePage }),
+  shellRoute.addChildren([
+    inShell('/', OverviewPage),
+    inShell('/karte', MapPage),
+    inShell('/gruppe', GroupsPage),
+    inShell('/chat', ChatPage),
+    inShell('/profil', ProfilePage),
+  ]),
+  authRoute('/anmelden', LoginPage),
+  authRoute('/registrieren', RegisterPage),
+  authRoute('/passwort-vergessen', ForgotPasswordPage),
+  authRoute('/passwort-neu', NewPasswordPage),
 ]);
 
-export function createAppRouter(options: { basepath?: string; history?: Parameters<typeof createRouter>[0]['history'] } = {}) {
+export function createAppRouter(options: { basepath?: string; history?: RouterHistory } = {}) {
   return createRouter({ routeTree, basepath: options.basepath, history: options.history, defaultPreload: 'intent' });
 }
 
