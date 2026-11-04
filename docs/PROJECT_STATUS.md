@@ -74,7 +74,7 @@ Details in [ARCHITECTURE.md](ARCHITECTURE.md), [DATABASE.md](DATABASE.md) und
 | --- | --- |
 | Projektstruktur, Designsystem, Navigation | fertig |
 | Supabase-Integration (Konfiguration, Start, Fehlerbehandlung) | fertig, lokal getestet |
-| Datenbank, RLS, Funktionen | fertig, 57 pgTAP-Tests grün |
+| Datenbank, RLS, Funktionen | fertig, 73 pgTAP-Tests grün (inkl. Review-Härtung) |
 | Registrierung, Anmeldung, Abmeldung | fertig |
 | Profil | fertig (Profilbild-Upload: Phase 2) |
 | Gruppen, Rollen, Einladungen | fertig |

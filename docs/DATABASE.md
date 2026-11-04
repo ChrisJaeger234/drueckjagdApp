@@ -10,6 +10,8 @@ in Dateinamensreihenfolge ausgeführt.
 | `20261104000003_rls_policies.sql` | Schema `private` mit Berechtigungsfunktionen, Rechte, RLS-Policies |
 | `20261104000004_group_functions.sql` | RPCs für Gruppen, Einladungen, Rollen, Mitglieder |
 | `20261104000005_storage_avatars.sql` | Privater Storage-Bucket `avatars` mit Policies |
+| `20261104000006_review_hardening.sql` | Härtung nach Review: Sperren gegen Owner-Race-Conditions, robustes Einlösen, automatischer Owner-Nachfolger bei Kontolöschung, Standardwerte `auth.uid()`, FK-Indizes |
+| `20261104000007_rls_security_test_fixes.sql` | Fixes aus dem Sicherheitstest: entfernte Mitglieder können ältere Einladungscodes nicht mehr nutzen (`group_member_removals`), `remove_group_member` verrät keine Mitgliedschaften |
 
 ## Tabellen
 
@@ -101,6 +103,9 @@ Indizes auf `(group_id, recorded_at desc)` und `(user_id, recorded_at desc)`.
 - Gruppe löschen → Mitgliedschaften, Einladungen, Reviere (inkl. Grenzen und
   Wegpunkte), Standorte und Nachrichten der Gruppe werden gelöscht.
 - Revier löschen → Grenzen und Wegpunkte werden gelöscht.
+- Konto des letzten Owners gelöscht → das dienstälteste Mitglied (Admins zuerst)
+  wird automatisch Owner; ist niemand mehr übrig, wird die leere Gruppe gelöscht
+  (Trigger `group_members_ensure_owner`, Migration 0006).
 
 ## Funktionen (RPC)
 
@@ -113,6 +118,13 @@ Indizes auf `(group_id, recorded_at desc)` und `(user_id, recorded_at desc)`.
 | `set_group_member_role(p_group_id, p_user_id, p_role)` | Owner | Rollen ändern; letzter Owner kann nicht herabgestuft werden |
 | `remove_group_member(p_group_id, p_user_id)` | Owner; Admin mit Freigabe (nur `member`) | Mitglied entfernen |
 | `leave_group(p_group_id)` | Mitglied | Gruppe verlassen; letzter Owner wird abgewiesen |
+
+Rollen ändern, Mitglieder entfernen und Gruppe verlassen sperren zuerst die
+Gruppenzeile (`private.lock_group`). Parallele Aufrufe laufen dadurch je Gruppe
+nacheinander, sodass eine Gruppe nie versehentlich ohne Owner bleibt.
+`created_by` (Reviere, Wegpunkte), `sender_id` (Nachrichten) und `user_id`
+(Standorte) haben den Standardwert `auth.uid()`; die Policies prüfen weiterhin,
+dass kein anderer Benutzer eingetragen wird.
 
 Fehler werden als stabile Schlüssel gemeldet (`not_authenticated`,
 `not_authorized`, `last_owner`, `member_not_found`, `too_many_attempts`,

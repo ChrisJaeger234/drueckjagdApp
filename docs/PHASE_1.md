@@ -20,7 +20,7 @@ existieren. Die Schritte stehen in [SETUP.md](SETUP.md).
 | Mitglieder zuordnen | ✓ | Einladung, Rollen ändern, entfernen, verlassen |
 | Einladungen sicher | ✓ | Hash statt Klartext, Ablauf, Limit, Widerruf, Drosselung (pgTAP) |
 | Reviere erstellen und Gruppen zuordnen | ✓ | Integrationstests |
-| Datenbankberechtigungen | ✓ | RLS auf allen Tabellen, 57 pgTAP-Tests |
+| Datenbankberechtigungen | ✓ | RLS auf allen Tabellen, 73 pgTAP-Tests |
 | Keine Sichtbarkeit zwischen Gruppen | ✓ | pgTAP + Integrationstests mit Außenstehendem |
 | Wichtigste Tests erfolgreich | ✓ | siehe Testergebnisse |
 | Dokumentation vollständig | ✓ | `docs/` |
@@ -98,7 +98,7 @@ Ausgeführt am 2026-11-04 mit Flutter 3.47.9 / Dart 3.13.7 und Supabase CLI 3.0.
 | `flutter analyze` (inkl. strict-casts, strict-raw-types) | keine Befunde |
 | `flutter test` – Unit-Tests (Konfiguration, Validierung, Fehlerübersetzung, Modelle, Berechtigungen, Auth-Redirect, Auth-Controller) | 50 bestanden |
 | `flutter test` – Widget-Tests (Start, Anmeldung, Registrierung, Gruppe + Revier anlegen, Member-Ansicht, Profil + Abmelden, Beitritt per Code) | 7 bestanden |
-| `supabase test db` – pgTAP (RLS, Funktionen, Einladungen) | 57 bestanden |
+| `supabase test db` – pgTAP (RLS, Funktionen, Einladungen) | 73 bestanden (57 + 16 aus dem Review, siehe REVIEW_PHASE_1.md) |
 | `flutter test test/integration` gegen lokales Supabase | 12 bestanden |
 | Manueller Durchlauf (Web-Build gegen lokales Supabase): Registrierung → Übersicht → Gruppe erstellen → Einladungscode | erfolgreich |
 
