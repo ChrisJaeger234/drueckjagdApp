@@ -2,7 +2,7 @@ import maplibregl, { type GeoJSONSource, type Map as MlMap, type Marker } from '
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection, Position } from 'geojson';
 import { useEffect, useRef, useState } from 'react';
-import { categoryColor, CATEGORY_LABEL, type Boundary, type Waypoint } from '../../features/reviere/revierModel';
+import type { Boundary } from '../../features/reviere/revierModel';
 import { DEFAULT_CENTER, type Bbox } from './geo';
 import { baseStyle, nrwDopUrl, type LayerId } from './layers';
 
@@ -12,10 +12,31 @@ export interface OwnPosition {
   accuracy: number;
 }
 
+export interface MapMarker {
+  id: string;
+  lat: number;
+  lng: number;
+  label: string;
+  color: string;
+  /** Vorgelesener Name, z. B. „Hochsitz Bock 12“. */
+  ariaLabel: string;
+  /** Hervorgehoben, z. B. der eigene Stand. */
+  highlight?: boolean;
+}
+
+export interface MapArea {
+  id: string;
+  geometry: Boundary;
+  color: string;
+}
+
 export interface MapViewProps {
   layer: LayerId;
+  /** Reviergrenzen (einheitlich gelb). */
   boundaries?: { id: string; geometry: Boundary }[];
-  waypoints?: Waypoint[];
+  /** Farbige Flächen, z. B. Treiben und Sicherheitszonen einer Jagd. */
+  areas?: MapArea[];
+  markers?: MapMarker[];
   /** Eckpunkte einer Grenze, die gerade gezeichnet wird. */
   draft?: Position[];
   position?: OwnPosition | null;
@@ -23,7 +44,7 @@ export interface MapViewProps {
   fit?: Bbox | null;
   fitKey?: string;
   onMapClick?: (lngLat: { lng: number; lat: number }) => void;
-  onWaypointClick?: (w: Waypoint) => void;
+  onMarkerClick?: (id: string) => void;
   className?: string;
 }
 
@@ -57,7 +78,14 @@ function draftCollection(points: Position[]): FeatureCollection {
   };
 }
 
+function areaCollection(list: MapArea[]): FeatureCollection {
+  return { type: 'FeatureCollection', features: list.map((a) => ({ type: 'Feature', id: a.id, properties: { color: a.color }, geometry: a.geometry })) };
+}
+
 function addOverlays(map: MlMap) {
+  map.addSource('areas', { type: 'geojson', data: EMPTY });
+  map.addLayer({ id: 'areas-fill', type: 'fill', source: 'areas', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': 0.18 } });
+  map.addLayer({ id: 'areas-line', type: 'line', source: 'areas', paint: { 'line-color': ['get', 'color'], 'line-width': 2.5 } });
   map.addSource('boundaries', { type: 'geojson', data: EMPTY });
   map.addLayer({ id: 'boundaries-fill', type: 'fill', source: 'boundaries', paint: { 'fill-color': '#e0a526', 'fill-opacity': 0.12 } });
   map.addLayer({ id: 'boundaries-line', type: 'line', source: 'boundaries', paint: { 'line-color': '#e0a526', 'line-width': 3 } });
@@ -72,14 +100,14 @@ function addOverlays(map: MlMap) {
   });
 }
 
-export default function MapView({ layer, boundaries = [], waypoints = [], draft = [], position, fit, fitKey, onMapClick, onWaypointClick, className = '' }: MapViewProps) {
+export default function MapView({ layer, boundaries = [], areas = [], markers = [], draft = [], position, fit, fitKey, onMapClick, onMarkerClick, className = '' }: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const [styleVersion, setStyleVersion] = useState(0);
   const ready = styleVersion > 0;
-  const handlers = useRef({ onMapClick, onWaypointClick });
+  const handlers = useRef({ onMapClick, onMarkerClick });
   useEffect(() => {
-    handlers.current = { onMapClick, onWaypointClick };
+    handlers.current = { onMapClick, onMarkerClick };
   });
 
   useEffect(() => {
@@ -132,28 +160,32 @@ export default function MapView({ layer, boundaries = [], waypoints = [], draft 
   }, [ready, styleVersion, boundaries]);
 
   useEffect(() => {
+    if (ready) (mapRef.current?.getSource('areas') as GeoJSONSource | undefined)?.setData(areaCollection(areas));
+  }, [ready, styleVersion, areas]);
+
+  useEffect(() => {
     if (ready) (mapRef.current?.getSource('draft') as GeoJSONSource | undefined)?.setData(draftCollection(draft));
   }, [ready, styleVersion, draft]);
 
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
-    const markers: Marker[] = waypoints.map((w) => {
+    const added: Marker[] = markers.map((m) => {
       const el = document.createElement('button');
       el.type = 'button';
-      el.className = 'map-waypoint';
-      el.style.setProperty('--wp-color', categoryColor(w.category));
-      el.setAttribute('aria-label', `${CATEGORY_LABEL[w.category]} ${w.name}`);
+      el.className = `map-waypoint${m.highlight ? ' map-waypoint-highlight' : ''}`;
+      el.style.setProperty('--wp-color', m.color);
+      el.setAttribute('aria-label', m.ariaLabel);
       el.innerHTML = '<span class="map-waypoint-dot"></span><span class="map-waypoint-label"></span>';
-      el.querySelector('.map-waypoint-label')!.textContent = w.name;
+      el.querySelector('.map-waypoint-label')!.textContent = m.label;
       el.addEventListener('click', (e) => {
         e.stopPropagation();
-        handlers.current.onWaypointClick?.(w);
+        handlers.current.onMarkerClick?.(m.id);
       });
-      return new maplibregl.Marker({ element: el, anchor: 'left', offset: [-8, 0] }).setLngLat([w.lng, w.lat]).addTo(map);
+      return new maplibregl.Marker({ element: el, anchor: 'left', offset: [-8, 0] }).setLngLat([m.lng, m.lat]).addTo(map);
     });
-    return () => markers.forEach((m) => m.remove());
-  }, [waypoints]);
+    return () => added.forEach((m) => m.remove());
+  }, [markers]);
 
   const posMarker = useRef<Marker | null>(null);
   useEffect(() => {

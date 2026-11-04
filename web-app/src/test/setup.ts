@@ -29,7 +29,7 @@ vi.mock('../modules/map/MapView', async () => {
     default: (props: import('../modules/map/MapView').MapViewProps) =>
       createElement(
         'div',
-        { 'data-testid': 'map', 'data-layer': props.layer, 'data-boundaries': props.boundaries?.length ?? 0, 'data-draft': props.draft?.length ?? 0 },
+        { 'data-testid': 'map', 'data-layer': props.layer, 'data-boundaries': props.boundaries?.length ?? 0, 'data-areas': props.areas?.length ?? 0, 'data-draft': props.draft?.length ?? 0 },
         createElement(
           'button',
           {
@@ -41,8 +41,8 @@ vi.mock('../modules/map/MapView', async () => {
           },
           'Karte antippen',
         ),
-        ...(props.waypoints ?? []).map((w) =>
-          createElement('button', { key: w.id, type: 'button', onClick: () => props.onWaypointClick?.(w) }, `Marker ${w.name}`),
+        ...(props.markers ?? []).map((m) =>
+          createElement('button', { key: m.id, type: 'button', onClick: () => props.onMarkerClick?.(m.id) }, `Marker ${m.label}`),
         ),
       ),
   };

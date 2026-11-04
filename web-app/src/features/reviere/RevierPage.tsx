@@ -13,7 +13,7 @@ import { useUser } from '../auth/AuthContext';
 import type { GroupPermissions } from '../groups/groupModel';
 import { useMyGroup } from '../groups/useGroups';
 import { MapToolbar, WaypointForm } from './mapControls';
-import { CATEGORY_LABEL, categoryColor, type Revier, type Waypoint } from './revierModel';
+import { CATEGORY_LABEL, categoryColor, waypointMarkers, type Revier, type Waypoint } from './revierModel';
 import { useBoundaries, useRevier, useRevierActions, useWaypoints } from './useReviere';
 
 const errorText = (e: unknown) => (e ? mapError(e).message : null);
@@ -44,6 +44,7 @@ function RevierView({ revier }: { revier: Revier }) {
   const ids = useMemo(() => [revier.id], [revier.id]);
   const { data: boundaries = [] } = useBoundaries(ids);
   const { data: waypoints = [] } = useWaypoints(ids);
+  const markers = useMemo(() => waypointMarkers(waypoints), [waypoints]);
   const actions = useRevierActions();
   const navigate = useNavigate();
 
@@ -119,13 +120,13 @@ function RevierView({ revier }: { revier: Revier }) {
         className="h-[55vh] min-h-72"
         layer={layer}
         boundaries={boundary ? [boundary] : []}
-        waypoints={waypoints}
+        markers={markers}
         draft={draft}
         position={ownPos}
         fit={fit}
         fitKey={`${revier.id}:${boundary?.id ?? ''}:${waypoints.length > 0}`}
         onMapClick={onMapClick}
-        onWaypointClick={(w) => mode.kind === 'view' && setSelected(w)}
+        onMarkerClick={(id) => mode.kind === 'view' && setSelected(waypoints.find((w) => w.id === id) ?? null)}
       />
 
       {mode.kind === 'draw' && (
