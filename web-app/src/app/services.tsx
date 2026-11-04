@@ -1,0 +1,21 @@
+import { createContext, useContext, type ReactNode } from 'react';
+import type { AuthService } from '../features/auth/authService';
+import type { ProfileService } from '../features/profile/profileService';
+
+/** Alle Zugriffe auf das Backend, austauschbar für Tests (wie die Repositories in Flutter). */
+export interface Services {
+  auth: AuthService;
+  profiles: ProfileService;
+}
+
+const ServicesContext = createContext<Services | null>(null);
+
+export function ServicesProvider({ services, children }: { services: Services; children: ReactNode }) {
+  return <ServicesContext.Provider value={services}>{children}</ServicesContext.Provider>;
+}
+
+export function useServices(): Services {
+  const ctx = useContext(ServicesContext);
+  if (!ctx) throw new Error('useServices außerhalb von ServicesProvider');
+  return ctx;
+}
