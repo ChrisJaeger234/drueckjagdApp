@@ -106,3 +106,13 @@ textarea {
   border: 3px solid #fff;
   box-shadow: 0 0 0 6px rgb(26 115 232 / 0.25);
 }
+.map-waypoint-highlight .map-waypoint-dot {
+  width: 22px;
+  height: 22px;
+  border-width: 3px;
+  box-shadow: 0 0 0 4px rgb(224 165 38 / 0.6);
+}
+.map-waypoint-highlight .map-waypoint-label {
+  background: #1d2a1c;
+  color: #fff;
+}

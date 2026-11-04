@@ -5,6 +5,20 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 5
+
+- Jagden je Gruppe planen (Owner und Admins): Termin, Revier, Treffpunkt, Freigabe,
+  Sicherheits- und Notfallhinweise, Selbsteintragung; der Ersteller wird per Trigger Jagdleiter
+- Übersicht zeigt die nächsten Jagden aus allen Gruppen
+- Teilnahme: selbst eintragen als Schütze, Treiber, Hundeführer, Bergung oder Sonstige;
+  die Jagdleitung (Owner, Admins, Jagdleiter, Ansteller) trägt Mitglieder ein, vergibt Rollen und
+  teilt Stände und Zonen zu
+- Stände per Tipp auf die Karte oder am eigenen Standort setzen, der eigene Stand ist hervorgehoben
+- Zonen zeichnen: Treiben, Sicherheits- und Sperrzonen, Sammelplätze (farbig auf der Karte)
+- Meldungen mit wenigen Tipps: erlegt, angeschossen, überschossen, Anblick, mit Wildart, Anzahl,
+  Stand und optional Standort; offene Nachsuchen stehen oben und lassen sich als erledigt markieren
+- Jagd starten, beenden, absagen, wieder öffnen und löschen (Owner und Admins)
+
 ## Stand Phase 4
 
 - Karte mit MapLibre GL JS und offenen Daten ohne Schlüssel: basemap.de (Karte) und Geobasis NRW
@@ -80,8 +94,9 @@ NODE_PATH=$(npm root -g) npm run e2e   # Rauchtest mit Playwright
 Ende-zu-Ende gegen eine lokale Datenbank mit allen Migrationen (siehe Kopf von
 `e2e/auth-local.mjs`): `supabase start` im Repository, App mit dessen URL und Key bauen, dann
 `node e2e/auth-local.mjs`, `node e2e/groups-local.mjs` (zwei Konten: Gruppe, Einladung,
-Beitritt, Rollen, Austritt, Löschen) und `node e2e/reviere-local.mjs` (echte Karte: Grenze zeichnen
-und importieren, Einrichtungen, Mitgliedersicht, Standort). Alle laufen auch in der CI.
+Beitritt, Rollen, Austritt, Löschen) `node e2e/reviere-local.mjs` (echte Karte: Grenze zeichnen
+und importieren, Einrichtungen, Mitgliedersicht, Standort) und `node e2e/hunts-local.mjs` (Jagd planen,
+selbst eintragen, Stand setzen und zuteilen, Treiben, Meldung und Nachsuche). Alle laufen auch in der CI.
 
 ## Veröffentlichung
 

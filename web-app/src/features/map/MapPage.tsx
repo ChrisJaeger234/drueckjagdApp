@@ -8,7 +8,7 @@ import type { LayerId } from '../../modules/map/layers';
 import { LazyMap } from '../../modules/map/LazyMap';
 import { useOwnPosition } from '../../modules/map/useOwnPosition';
 import { MapToolbar } from '../reviere/mapControls';
-import { CATEGORY_LABEL, type Waypoint } from '../reviere/revierModel';
+import { CATEGORY_LABEL, waypointMarkers, type Waypoint } from '../reviere/revierModel';
 import { useAllReviere, useBoundaries, useWaypoints } from '../reviere/useReviere';
 
 /** Übersichtskarte aller Reviere aus allen eigenen Gruppen. */
@@ -17,6 +17,7 @@ export function MapPage() {
   const ids = useMemo(() => (reviere ?? []).map((r) => r.id), [reviere]);
   const { data: boundaries = [] } = useBoundaries(ids);
   const { data: waypoints = [] } = useWaypoints(ids);
+  const markers = useMemo(() => waypointMarkers(waypoints), [waypoints]);
   const [layer, setLayer] = useState<LayerId>('karte');
   const [locate, setLocate] = useState(false);
   const position = useOwnPosition(locate);
@@ -31,12 +32,12 @@ export function MapPage() {
         className="h-[62vh] min-h-80"
         layer={layer}
         boundaries={boundaries}
-        waypoints={waypoints}
+        markers={markers}
         position={position.status === 'ok' ? position.position : null}
         fit={fit}
         fitKey={`${boundaries.length}:${waypoints.length > 0}`}
         onMapClick={() => setSelected(null)}
-        onWaypointClick={setSelected}
+        onMarkerClick={(id) => setSelected(waypoints.find((w) => w.id === id) ?? null)}
       />
       {error && <FormError message={mapError(error).message} />}
       {selected && (

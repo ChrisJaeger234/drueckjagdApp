@@ -147,3 +147,7 @@ export interface WaypointInput {
   lat: number;
   lng: number;
 }
+
+/** Einrichtungen als Kartenmarker. */
+export const waypointMarkers = (list: Waypoint[]) =>
+  list.map((w) => ({ id: w.id, lat: w.lat, lng: w.lng, label: w.name, color: categoryColor(w.category), ariaLabel: `${CATEGORY_LABEL[w.category]} ${w.name}` }));

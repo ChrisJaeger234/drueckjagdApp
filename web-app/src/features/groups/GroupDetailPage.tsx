@@ -20,6 +20,8 @@ import {
 import { RoleBadge } from './RoleBadge';
 import { useGroupActions, useInvites, useMembers, useMyGroup } from './useGroups';
 import { useGroupReviere } from '../reviere/useReviere';
+import { HuntList } from '../hunts/HuntList';
+import { useGroupHunts } from '../hunts/useHunts';
 
 const errorText = (e: unknown) => (e ? mapError(e).message : null);
 const dateTime = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
@@ -52,6 +54,7 @@ export function GroupDetailPage() {
             </div>
             {mine.group.description && <p className="mt-2 whitespace-pre-line text-sm">{mine.group.description}</p>}
           </Card>
+          <GroupHunts groupId={groupId} canCreate={permissions.canCreateRevier} />
           <GroupReviere groupId={groupId} canCreate={permissions.canCreateRevier} />
           <Members groupId={groupId} permissions={permissions} />
           {permissions.canInvite && <Invites groupId={groupId} />}
@@ -336,6 +339,35 @@ function GroupReviere({ groupId, canCreate }: { groupId: string; canCreate: bool
             </li>
           ))}
         </ul>
+      )}
+    </Card>
+  );
+}
+
+function GroupHunts({ groupId, canCreate }: { groupId: string; canCreate: boolean }) {
+  const { data: hunts, isPending, error } = useGroupHunts(groupId);
+  return (
+    <Card>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-semibold">Jagden</h2>
+        {canCreate && (
+          <Link
+            to="/gruppe/$groupId/jagd-neu"
+            params={{ groupId }}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 text-sm font-medium"
+          >
+            <Plus aria-hidden className="size-4" /> Jagd planen
+          </Link>
+        )}
+      </div>
+      {isPending ? (
+        <p className="text-sm text-muted">Jagden werden geladen …</p>
+      ) : error ? (
+        <FormError message={errorText(error)} />
+      ) : hunts.length === 0 ? (
+        <p className="text-sm text-muted">Noch keine Jagden geplant.</p>
+      ) : (
+        <HuntList hunts={hunts} label="Jagden der Gruppe" />
       )}
     </Card>
   );

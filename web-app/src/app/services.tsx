@@ -1,6 +1,7 @@
 import { createContext, useContext, type ReactNode } from 'react';
 import type { AuthService } from '../features/auth/authService';
 import type { GroupsService } from '../features/groups/groupsService';
+import type { HuntsService } from '../features/hunts/huntsService';
 import type { ProfileService } from '../features/profile/profileService';
 import type { ReviereService } from '../features/reviere/reviereService';
 
@@ -10,6 +11,7 @@ export interface Services {
   profiles: ProfileService;
   groups: GroupsService;
   reviere: ReviereService;
+  hunts: HuntsService;
 }
 
 const ServicesContext = createContext<Services | null>(null);

@@ -6,6 +6,7 @@ import { createAppRouter } from './app/router';
 import { SetupPage } from './app/SetupPage';
 import { createSupabaseAuthService } from './features/auth/authService';
 import { createSupabaseGroupsService } from './features/groups/groupsService';
+import { createSupabaseHuntsService } from './features/hunts/huntsService';
 import { createSupabaseProfileService } from './features/profile/profileService';
 import { createSupabaseReviereService } from './features/reviere/reviereService';
 import { supabase } from './lib/supabase';
@@ -26,6 +27,7 @@ if (!supabase) {
     profiles: createSupabaseProfileService(supabase),
     groups: createSupabaseGroupsService(supabase),
     reviere: createSupabaseReviereService(supabase),
+    hunts: createSupabaseHuntsService(supabase),
   };
   const router = createAppRouter({ basepath: base.replace(/\/$/, '') || '/' });
   root.render(

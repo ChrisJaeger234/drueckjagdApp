@@ -5,6 +5,25 @@ import { inviteStatus, type GroupInvite, type GroupMember, type GroupRole, type 
 import type { GroupsService } from '../features/groups/groupsService';
 import type { Boundary, Revier, RevierBoundary, Waypoint, WaypointInput } from '../features/reviere/revierModel';
 import type { ReviereService } from '../features/reviere/reviereService';
+import {
+  canSelfJoinHunt,
+  isLeadRole,
+  sortHunts,
+  sortParticipants,
+  sortStands,
+  type Hunt,
+  type HuntDraft,
+  type HuntRole,
+  type HuntStatus,
+  type Participant,
+  type Report,
+  type ReportInput,
+  type Stand,
+  type StandInput,
+  type Zone,
+  type ZoneKind,
+} from '../features/hunts/huntModel';
+import type { HuntsService } from '../features/hunts/huntsService';
 
 /** In-Memory-Auth für Tests (wie FakeAuthRepository in der Flutter-App). */
 export class FakeAuth implements AuthService {
@@ -291,5 +310,157 @@ export class FakeReviere implements ReviereService {
   }
   async removeWaypoint(waypointId: string) {
     this.waypointList = this.waypointList.filter((w) => w.id !== waypointId);
+  }
+}
+
+/** In-Memory-Jagden mit den wichtigsten Regeln aus Migration 0010. */
+/** Kopien wie bei echten Serverantworten, damit Änderungen im Fake nicht den Abfrage-Cache verändern. */
+const clone = <T,>(v: T): T => structuredClone(v);
+
+export class FakeHunts implements HuntsService {
+  hunts: Hunt[] = [];
+  participantList: Participant[] = [];
+  standList: Stand[] = [];
+  zoneList: Zone[] = [];
+  reportList: Report[] = [];
+  private seq = 0;
+  constructor(private auth: FakeAuth, private groups: FakeGroups, private profiles: FakeProfiles) {}
+
+  private uid() {
+    return this.auth.user!.id;
+  }
+  private groupRole(huntId: string) {
+    const h = this.hunts.find((x) => x.id === huntId);
+    return this.groups.memberList.find((m) => m.groupId === h?.groupId && m.userId === this.uid())?.role ?? null;
+  }
+  private canManage(huntId: string) {
+    const role = this.groupRole(huntId);
+    const me = this.participantList.find((p) => p.huntId === huntId && p.userId === this.uid());
+    return role === 'owner' || role === 'admin' || (me != null && isLeadRole(me.role));
+  }
+  private requireManage(huntId: string) {
+    if (!this.canManage(huntId)) throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+  }
+  private name(userId: string) {
+    const p = this.profiles.profiles.get(userId);
+    return p?.displayName || (p?.username ? `@${p.username}` : 'Unbekannt');
+  }
+
+  seedHunt(groupId: string, data: Partial<Hunt> = {}) {
+    const h: Hunt = {
+      id: `h${++this.seq}`, groupId, groupName: this.groups.groups.get(groupId)?.name ?? null, revierId: null, revierName: null,
+      title: 'Drückjagd', description: '', startsAt: '2026-11-21T07:00:00.000Z', endsAt: null, status: 'geplant', meetingPoint: '',
+      meetingLat: null, meetingLng: null, gameRelease: '', safetyNotes: '', emergencyInfo: '', selfJoin: true, createdBy: null, ...data,
+    };
+    this.hunts.push(h);
+    return h.id;
+  }
+  seedParticipant(huntId: string, userId: string, role: HuntRole, standId: string | null = null) {
+    this.participantList.push({ id: `p${++this.seq}`, huntId, userId, role, standId, zoneId: null, note: '', name: this.name(userId) });
+  }
+  seedStand(huntId: string, label: string) {
+    const s: Stand = { id: `s${++this.seq}`, huntId, label, waypointId: null, zoneId: null, lat: 51.17, lng: 7.25, description: '', sortOrder: 0 };
+    this.standList.push(s);
+    return s.id;
+  }
+
+  async all() {
+    return clone(sortHunts(this.hunts.filter((h) => this.groups.memberList.some((m) => m.groupId === h.groupId && m.userId === this.uid()))));
+  }
+  async forGroup(groupId: string) {
+    return (await this.all()).filter((h) => h.groupId === groupId);
+  }
+  async get(huntId: string) {
+    const h = (await this.all()).find((x) => x.id === huntId);
+    if (!h) throw new AppError('Diese Jagd existiert nicht oder du hast keinen Zugriff.', 'notFound');
+    return h;
+  }
+  async create(groupId: string, d: HuntDraft) {
+    const role = this.groups.memberList.find((m) => m.groupId === groupId && m.userId === this.uid())?.role;
+    if (role !== 'owner' && role !== 'admin') throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    const id = this.seedHunt(groupId, { ...d, startsAt: new Date(d.startsAt).toISOString(), endsAt: d.endsAt ? new Date(d.endsAt).toISOString() : null, createdBy: this.uid() });
+    this.seedParticipant(id, this.uid(), 'jagdleiter');
+    return this.hunts.find((h) => h.id === id)!;
+  }
+  async update(huntId: string, d: HuntDraft) {
+    this.requireManage(huntId);
+    Object.assign(this.hunts.find((h) => h.id === huntId)!, { ...d, startsAt: new Date(d.startsAt).toISOString() });
+  }
+  async setStatus(huntId: string, status: HuntStatus) {
+    this.requireManage(huntId);
+    this.hunts.find((h) => h.id === huntId)!.status = status;
+  }
+  async remove(huntId: string) {
+    const role = this.groupRole(huntId);
+    if (role !== 'owner' && role !== 'admin') throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    this.hunts = this.hunts.filter((h) => h.id !== huntId);
+  }
+  async participants(huntId: string) {
+    return clone(sortParticipants(this.participantList.filter((p) => p.huntId === huntId)));
+  }
+  async join(huntId: string, role: HuntRole) {
+    const h = this.hunts.find((x) => x.id === huntId)!;
+    if (isLeadRole(role) || !canSelfJoinHunt(h)) throw new AppError('Dafür fehlen dir die Berechtigungen in dieser Gruppe.', 'forbidden');
+    this.seedParticipant(huntId, this.uid(), role);
+  }
+  async addParticipant(huntId: string, userId: string, role: HuntRole) {
+    this.requireManage(huntId);
+    this.seedParticipant(huntId, userId, role);
+  }
+  async updateParticipant(id: string, patch: { role?: HuntRole; note?: string; standId?: string | null; zoneId?: string | null }) {
+    const p = this.participantList.find((x) => x.id === id)!;
+    const manage = this.canManage(p.huntId);
+    if (!manage && (p.userId !== this.uid() || patch.standId !== undefined || patch.zoneId !== undefined || (patch.role && isLeadRole(patch.role)))) {
+      throw new AppError('Dafür fehlen dir die Berechtigungen in dieser Gruppe.', 'forbidden');
+    }
+    if (patch.role !== undefined) p.role = patch.role;
+    if (patch.note !== undefined) p.note = patch.note;
+    if (patch.standId !== undefined) p.standId = patch.standId;
+    if (patch.zoneId !== undefined) p.zoneId = patch.zoneId;
+  }
+  async removeParticipant(id: string) {
+    const p = this.participantList.find((x) => x.id === id)!;
+    if (p.userId !== this.uid()) this.requireManage(p.huntId);
+    this.participantList = this.participantList.filter((x) => x.id !== id);
+  }
+  async zones(huntId: string) {
+    return clone(this.zoneList.filter((z) => z.huntId === huntId));
+  }
+  async createZone(huntId: string, { name, kind, geometry }: { name: string; kind: ZoneKind; geometry: Boundary }) {
+    this.requireManage(huntId);
+    this.zoneList.push({ id: `z${++this.seq}`, huntId, name, kind, description: '', color: null, geometry });
+  }
+  async removeZone(zoneId: string) {
+    this.zoneList = this.zoneList.filter((z) => z.id !== zoneId);
+  }
+  async stands(huntId: string) {
+    return clone(sortStands(this.standList.filter((s) => s.huntId === huntId)));
+  }
+  async createStand(huntId: string, input: StandInput) {
+    this.requireManage(huntId);
+    if (this.standList.some((s) => s.huntId === huntId && s.label.toLowerCase() === input.label.trim().toLowerCase())) {
+      throw new AppError('In dieser Jagd gibt es bereits einen Stand mit dieser Bezeichnung.', 'conflict');
+    }
+    const id = this.seedStand(huntId, input.label.trim());
+    return Object.assign(this.standList.find((s) => s.id === id)!, { lat: input.lat, lng: input.lng });
+  }
+  async updateStand(standId: string, input: StandInput) {
+    Object.assign(this.standList.find((s) => s.id === standId)!, input);
+  }
+  async removeStand(standId: string) {
+    this.standList = this.standList.filter((s) => s.id !== standId);
+    this.participantList.forEach((p) => p.standId === standId && (p.standId = null));
+  }
+  async reports(huntId: string) {
+    return clone(this.reportList.filter((r) => r.huntId === huntId));
+  }
+  async createReport(huntId: string, r: ReportInput) {
+    this.reportList.unshift({ id: `rep${++this.seq}`, huntId, reporterId: this.uid(), reporterName: this.name(this.uid()), occurredAt: new Date().toISOString(), resolvedAt: null, ...r });
+  }
+  async setReportResolved(reportId: string, resolved: boolean) {
+    this.reportList.find((r) => r.id === reportId)!.resolvedAt = resolved ? new Date().toISOString() : null;
+  }
+  async removeReport(reportId: string) {
+    this.reportList = this.reportList.filter((r) => r.id !== reportId);
   }
 }

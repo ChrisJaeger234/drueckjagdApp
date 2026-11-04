@@ -7,6 +7,8 @@ import { ChatPage } from '../features/chat/ChatPage';
 import { CreateGroupPage } from '../features/groups/CreateGroupPage';
 import { GroupDetailPage } from '../features/groups/GroupDetailPage';
 import { GroupsPage } from '../features/groups/GroupsPage';
+import { CreateHuntPage, EditHuntPage } from '../features/hunts/HuntFormPage';
+import { HuntPage } from '../features/hunts/HuntPage';
 import { JoinGroupPage } from '../features/groups/JoinGroupPage';
 import { MapPage } from '../features/map/MapPage';
 import { OverviewPage } from '../features/overview/OverviewPage';
@@ -35,6 +37,9 @@ export const routeTree = rootRoute.addChildren([
     inShell('/gruppe/$groupId', GroupDetailPage),
     inShell('/gruppe/$groupId/revier-neu', CreateRevierPage),
     inShell('/revier/$revierId', RevierPage),
+    inShell('/gruppe/$groupId/jagd-neu', CreateHuntPage),
+    inShell('/jagd/$huntId', HuntPage),
+    inShell('/jagd/$huntId/bearbeiten', EditHuntPage),
     inShell('/revier/$revierId/bearbeiten', EditRevierPage),
     inShell('/chat', ChatPage),
     inShell('/profil', ProfilePage),
