@@ -6,11 +6,7 @@ import 'dart:convert';
 /// einzelne `--dart-define`-Argumente) gesetzt und niemals im Quellcode
 /// hinterlegt.
 class AppConfig {
-  const AppConfig({
-    required this.supabaseUrl,
-    required this.supabaseAnonKey,
-    this.authRedirectUrl,
-  });
+  const AppConfig({required this.supabaseUrl, required this.supabaseAnonKey, this.authRedirectUrl});
 
   /// Liest die Konfiguration aus den Dart-Defines.
   factory AppConfig.fromEnvironment() {

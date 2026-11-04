@@ -31,11 +31,11 @@ const _skip = (_url == '' || _key == '')
 /// Ein Testbenutzer mit eigenem Client und allen Repositories.
 class _Actor {
   _Actor(this.name)
-      : client = SupabaseClient(
-          _url,
-          _key,
-          authOptions: const AuthClientOptions(autoRefreshToken: false, authFlowType: AuthFlowType.implicit),
-        ) {
+    : client = SupabaseClient(
+        _url,
+        _key,
+        authOptions: const AuthClientOptions(autoRefreshToken: false, authFlowType: AuthFlowType.implicit),
+      ) {
     auth = SupabaseAuthRepository(client, emailRedirectUrl: null);
     profiles = SupabaseProfileRepository(client);
     groups = SupabaseGroupsRepository(client);
@@ -154,8 +154,10 @@ void main() {
       expect(joined, groupId);
 
       final members = await alice.groups.fetchMembers(groupId);
-      expect(members.map((m) => (m.userId, m.role)),
-          unorderedEquals([(alice.id, GroupRole.owner), (bob.id, GroupRole.member)]));
+      expect(
+        members.map((m) => (m.userId, m.role)),
+        unorderedEquals([(alice.id, GroupRole.owner), (bob.id, GroupRole.member)]),
+      );
       expect(members.firstWhere((m) => m.userId == alice.id).profile?.displayName, 'Alice');
 
       final invites = await alice.groups.fetchInvites(groupId);
@@ -211,8 +213,11 @@ void main() {
       expect((await alice.reviere.fetchForGroup(groupId)).single.id, revier.id);
       expect(await mallory.reviere.fetchAll(), isEmpty);
       await expectLater(mallory.reviere.fetchById(revier.id), _appError(AppErrorKind.notFound));
-      await expectLater(bob.reviere.delete(revier.id), _appError(AppErrorKind.forbidden),
-          reason: 'Nur Owner löschen Reviere');
+      await expectLater(
+        bob.reviere.delete(revier.id),
+        _appError(AppErrorKind.forbidden),
+        reason: 'Nur Owner löschen Reviere',
+      );
     });
 
     test('Mitglieder verlassen; letzter Owner kann nicht gehen; Owner löscht Gruppe', () async {

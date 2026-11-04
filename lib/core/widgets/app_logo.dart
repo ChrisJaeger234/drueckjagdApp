@@ -42,10 +42,7 @@ class AppLogo extends StatelessWidget {
           const SizedBox(height: 6),
           Text(
             AppConstants.appTagline,
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: textColor.withValues(alpha: 0.75),
-              letterSpacing: 1.5,
-            ),
+            style: theme.textTheme.bodyMedium?.copyWith(color: textColor.withValues(alpha: 0.75), letterSpacing: 1.5),
           ),
         ],
       ],

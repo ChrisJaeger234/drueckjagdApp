@@ -1,3 +1,37 @@
-# drueckjagd_app
+# Drückjagd – Jagd- und Reviermanagement-App
 
-A new Flutter project.
+Private App für Jagdgruppen: Benutzerkonten, Gruppen mit Rollen, sichere
+Einladungen und Reviere. Später: gemeinsame Revierkarte, Wegpunkte,
+Standortfreigabe, Chat und Offline-Nutzung.
+
+**Stack:** Flutter (iOS/Android, Material 3) · Riverpod · GoRouter ·
+Supabase (Auth, PostgreSQL mit RLS, Storage, PostGIS)
+
+## Schnellstart
+
+```bash
+cp .env.example .env          # Supabase-URL und Publishable key eintragen
+flutter pub get
+flutter run --dart-define-from-file=.env
+```
+
+Ohne `.env` startet die App mit dem Hinweis „Einrichtung erforderlich“.
+
+## Dokumentation
+
+| Dokument | Inhalt |
+| --- | --- |
+| [docs/SETUP.md](docs/SETUP.md) | Supabase verbinden, App starten, Tests ausführen |
+| [docs/PHASE_1.md](docs/PHASE_1.md) | Funktionsumfang, Testergebnisse, offene Punkte, Empfehlung Phase 2 |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Aufbau und technische Entscheidungen |
+| [docs/DATABASE.md](docs/DATABASE.md) | Tabellen, Funktionen, Migrationen |
+| [docs/SECURITY.md](docs/SECURITY.md) | Rollen, RLS, Einladungscodes |
+| [docs/PROJECT_STATUS.md](docs/PROJECT_STATUS.md) | Bestandsaufnahme und Status |
+
+## Tests
+
+```bash
+flutter analyze
+flutter test
+supabase start && supabase db reset && supabase test db
+```

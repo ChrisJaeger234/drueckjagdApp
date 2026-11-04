@@ -21,21 +21,11 @@ class AppButton extends StatelessWidget {
     this.isLoading = false,
   }) : variant = AppButtonVariant.secondary;
 
-  const AppButton.text({
-    super.key,
-    required this.label,
-    required this.onPressed,
-    this.icon,
-    this.isLoading = false,
-  }) : variant = AppButtonVariant.text;
+  const AppButton.text({super.key, required this.label, required this.onPressed, this.icon, this.isLoading = false})
+    : variant = AppButtonVariant.text;
 
-  const AppButton.danger({
-    super.key,
-    required this.label,
-    required this.onPressed,
-    this.icon,
-    this.isLoading = false,
-  }) : variant = AppButtonVariant.danger;
+  const AppButton.danger({super.key, required this.label, required this.onPressed, this.icon, this.isLoading = false})
+    : variant = AppButtonVariant.danger;
 
   final String label;
   final VoidCallback? onPressed;

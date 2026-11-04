@@ -55,7 +55,9 @@ class _ProfileFormState extends ConsumerState<_ProfileForm> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
     try {
-      await ref.read(profileRepositoryProvider).updateProfile(
+      await ref
+          .read(profileRepositoryProvider)
+          .updateProfile(
             userId: ref.read(currentUserIdProvider),
             username: _username.text,
             displayName: _displayName.text,

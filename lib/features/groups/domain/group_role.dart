@@ -10,8 +10,10 @@ enum GroupRole {
   final String label;
   final String description;
 
-  static GroupRole fromValue(String value) =>
-      GroupRole.values.firstWhere((r) => r.value == value, orElse: () => throw FormatException('Unbekannte Rolle: $value'));
+  static GroupRole fromValue(String value) => GroupRole.values.firstWhere(
+    (r) => r.value == value,
+    orElse: () => throw FormatException('Unbekannte Rolle: $value'),
+  );
 }
 
 /// Berechtigungen eines Mitglieds – spiegelt die serverseitigen Regeln

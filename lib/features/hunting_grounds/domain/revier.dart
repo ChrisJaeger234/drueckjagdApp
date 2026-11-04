@@ -12,15 +12,15 @@ class Revier {
   });
 
   factory Revier.fromJson(Map<String, dynamic> json) => Revier(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        description: (json['description'] as String?) ?? '',
-        groupId: json['group_id'] as String,
-        createdBy: json['created_by'] as String?,
-        createdAt: DateTime.parse(json['created_at'] as String),
-        updatedAt: DateTime.parse(json['updated_at'] as String),
-        groupName: (json['group'] as Map<String, dynamic>?)?['name'] as String?,
-      );
+    id: json['id'] as String,
+    name: json['name'] as String,
+    description: (json['description'] as String?) ?? '',
+    groupId: json['group_id'] as String,
+    createdBy: json['created_by'] as String?,
+    createdAt: DateTime.parse(json['created_at'] as String),
+    updatedAt: DateTime.parse(json['updated_at'] as String),
+    groupName: (json['group'] as Map<String, dynamic>?)?['name'] as String?,
+  );
 
   static const columns = 'id, name, description, group_id, created_by, created_at, updated_at, group:groups(name)';
 

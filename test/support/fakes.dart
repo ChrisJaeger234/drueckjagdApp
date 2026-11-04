@@ -29,10 +29,10 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Stream<AppUser?> authStateChanges() => Stream.multi((listener) {
-        listener.add(_user);
-        final sub = _controller.stream.listen(listener.add);
-        listener.onCancel = sub.cancel;
-      });
+    listener.add(_user);
+    final sub = _controller.stream.listen(listener.add);
+    listener.onCancel = sub.cancel;
+  });
 
   void _emit(AppUser? user) {
     _user = user;
@@ -51,8 +51,10 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<SignUpResult> signUp({required String email, required String password}) async {
     if (passwords.containsKey(email.trim())) {
-      throw const AppException('Für diese E-Mail-Adresse existiert bereits ein Konto.',
-          kind: AppErrorKind.emailAlreadyRegistered);
+      throw const AppException(
+        'Für diese E-Mail-Adresse existiert bereits ein Konto.',
+        kind: AppErrorKind.emailAlreadyRegistered,
+      );
     }
     passwords[email.trim()] = password;
     if (requireConfirmation) return SignUpResult.confirmationRequired;
@@ -70,20 +72,14 @@ class FakeAuthRepository implements AuthRepository {
 class FakeProfileRepository implements ProfileRepository {
   final Map<String, Profile> profiles = {};
 
-  Profile _ensure(String id) => profiles.putIfAbsent(
-        id,
-        () => Profile(id: id, displayName: '', createdAt: _epoch, updatedAt: _epoch),
-      );
+  Profile _ensure(String id) =>
+      profiles.putIfAbsent(id, () => Profile(id: id, displayName: '', createdAt: _epoch, updatedAt: _epoch));
 
   @override
   Future<Profile> fetchProfile(String userId) async => _ensure(userId);
 
   @override
-  Future<Profile> updateProfile({
-    required String userId,
-    required String username,
-    required String displayName,
-  }) async {
+  Future<Profile> updateProfile({required String userId, required String username, required String displayName}) async {
     final updated = _ensure(userId).copyWith(username: username, displayName: displayName);
     profiles[userId] = updated;
     return updated;
@@ -102,9 +98,9 @@ class FakeGroupsRepository implements GroupsRepository {
 
   @override
   Future<List<MyGroup>> fetchMyGroups(String userId) async => [
-        for (final g in groups.values)
-          if (roles[g.id]?[userId] != null) MyGroup(group: g, role: roles[g.id]![userId]!),
-      ];
+    for (final g in groups.values)
+      if (roles[g.id]?[userId] != null) MyGroup(group: g, role: roles[g.id]![userId]!),
+  ];
 
   @override
   Future<MyGroup> fetchMyGroup({required String userId, required String groupId}) async {
@@ -157,17 +153,16 @@ class FakeGroupsRepository implements GroupsRepository {
 
   @override
   Future<List<GroupMember>> fetchMembers(String groupId) async => [
-        for (final e in roles[groupId]!.entries)
-          GroupMember(id: 'm-${e.key}', groupId: groupId, userId: e.key, role: e.value, joinedAt: _epoch),
-      ];
+    for (final e in roles[groupId]!.entries)
+      GroupMember(id: 'm-${e.key}', groupId: groupId, userId: e.key, role: e.value, joinedAt: _epoch),
+  ];
 
   @override
   Future<void> setMemberRole({required String groupId, required String userId, required GroupRole role}) async =>
       roles[groupId]![userId] = role;
 
   @override
-  Future<void> removeMember({required String groupId, required String userId}) async =>
-      roles[groupId]!.remove(userId);
+  Future<void> removeMember({required String groupId, required String userId}) async => roles[groupId]!.remove(userId);
 
   @override
   Future<void> leaveGroup(String groupId) async => roles[groupId]!.remove(currentUserId);

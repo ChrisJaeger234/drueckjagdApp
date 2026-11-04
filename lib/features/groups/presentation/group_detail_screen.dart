@@ -37,7 +37,8 @@ class GroupDetailScreen extends ConsumerWidget {
         final ok = await showConfirmDialog(
           context,
           title: 'Gruppe verlassen?',
-          message: 'Du verlierst den Zugriff auf „${group.group.name}“ und ihre Reviere. '
+          message:
+              'Du verlierst den Zugriff auf „${group.group.name}“ und ihre Reviere. '
               'Für einen erneuten Beitritt brauchst du einen neuen Einladungscode.',
           confirmLabel: 'Verlassen',
           destructive: true,
@@ -316,11 +317,11 @@ class _MembersSection extends ConsumerWidget {
   }
 
   static String _label(_MemberAction a) => switch (a) {
-        _MemberAction.makeOwner => 'Zum Owner ernennen',
-        _MemberAction.makeAdmin => 'Zum Admin ernennen',
-        _MemberAction.makeMember => 'Zum Mitglied herabstufen',
-        _MemberAction.remove => 'Aus Gruppe entfernen',
-      };
+    _MemberAction.makeOwner => 'Zum Owner ernennen',
+    _MemberAction.makeAdmin => 'Zum Admin ernennen',
+    _MemberAction.makeMember => 'Zum Mitglied herabstufen',
+    _MemberAction.remove => 'Aus Gruppe entfernen',
+  };
 }
 
 class _InvitesSection extends ConsumerWidget {
@@ -376,11 +377,7 @@ class _InvitesSection extends ConsumerWidget {
                 children: [
                   for (final (i, inv) in list.indexed) ...[
                     if (i > 0) const Divider(),
-                    _InviteTile(
-                      invite: inv,
-                      status: inv.statusAt(now),
-                      onRevoke: () => _revoke(context, ref, inv),
-                    ),
+                    _InviteTile(invite: inv, status: inv.statusAt(now), onRevoke: () => _revoke(context, ref, inv)),
                   ],
                 ],
               ),
@@ -403,15 +400,15 @@ class _InviteTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
     final active = status == InviteStatus.active;
-    final uses = invite.maxUses == null ? '${invite.useCount} Nutzungen' : '${invite.useCount}/${invite.maxUses} genutzt';
+    final uses = invite.maxUses == null
+        ? '${invite.useCount} Nutzungen'
+        : '${invite.useCount}/${invite.maxUses} genutzt';
     final expiry = invite.expiresAt == null ? 'ohne Ablauf' : 'gültig bis ${Formatters.dateTime(invite.expiresAt!)}';
     return ListTile(
       leading: Icon(active ? Icons.key : Icons.key_off_outlined, color: active ? scheme.primary : scheme.outline),
       title: Text('Erstellt am ${Formatters.dateTime(invite.createdAt)}'),
       subtitle: Text('${status.label} · $uses · $expiry'),
-      trailing: active
-          ? IconButton(tooltip: 'Widerrufen', icon: const Icon(Icons.block), onPressed: onRevoke)
-          : null,
+      trailing: active ? IconButton(tooltip: 'Widerrufen', icon: const Icon(Icons.block), onPressed: onRevoke) : null,
     );
   }
 }

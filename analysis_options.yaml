@@ -20,3 +20,6 @@ linter:
     - prefer_single_quotes
     - unawaited_futures
     - use_super_parameters
+
+formatter:
+  page_width: 120

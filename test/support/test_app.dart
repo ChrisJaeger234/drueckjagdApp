@@ -13,9 +13,9 @@ import 'fakes.dart';
 /// Baut die komplette App mit In-Memory-Repositories (ohne Netzwerk).
 class TestApp {
   TestApp({FakeAuthRepository? auth})
-      : auth = auth ?? FakeAuthRepository(),
-        profiles = FakeProfileRepository(),
-        reviere = FakeReviereRepository() {
+    : auth = auth ?? FakeAuthRepository(),
+      profiles = FakeProfileRepository(),
+      reviere = FakeReviereRepository() {
     groups = FakeGroupsRepository(currentUserId: 'user-1');
   }
 
@@ -32,15 +32,15 @@ class TestApp {
   );
 
   Widget build() => ProviderScope(
-        retry: (_, _) => null,
-        overrides: [
-          splashMinimumDurationProvider.overrideWithValue(Duration.zero),
-          appStartupProvider.overrideWith((ref) async => _unusedClient),
-          authRepositoryProvider.overrideWithValue(auth),
-          profileRepositoryProvider.overrideWithValue(profiles),
-          groupsRepositoryProvider.overrideWithValue(groups),
-          reviereRepositoryProvider.overrideWithValue(reviere),
-        ],
-        child: const DrueckjagdApp(),
-      );
+    retry: (_, _) => null,
+    overrides: [
+      splashMinimumDurationProvider.overrideWithValue(Duration.zero),
+      appStartupProvider.overrideWith((ref) async => _unusedClient),
+      authRepositoryProvider.overrideWithValue(auth),
+      profileRepositoryProvider.overrideWithValue(profiles),
+      groupsRepositoryProvider.overrideWithValue(groups),
+      reviereRepositoryProvider.overrideWithValue(reviere),
+    ],
+    child: const DrueckjagdApp(),
+  );
 }

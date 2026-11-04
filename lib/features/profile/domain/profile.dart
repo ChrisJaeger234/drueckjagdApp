@@ -10,13 +10,13 @@ class Profile {
   });
 
   factory Profile.fromJson(Map<String, dynamic> json) => Profile(
-        id: json['id'] as String,
-        username: json['username'] as String?,
-        displayName: (json['display_name'] as String?) ?? '',
-        avatarUrl: json['avatar_url'] as String?,
-        createdAt: DateTime.parse(json['created_at'] as String),
-        updatedAt: DateTime.parse(json['updated_at'] as String),
-      );
+    id: json['id'] as String,
+    username: json['username'] as String?,
+    displayName: (json['display_name'] as String?) ?? '',
+    avatarUrl: json['avatar_url'] as String?,
+    createdAt: DateTime.parse(json['created_at'] as String),
+    updatedAt: DateTime.parse(json['updated_at'] as String),
+  );
 
   /// Spalten, die beim Laden abgefragt werden.
   static const columns = 'id, username, display_name, avatar_url, created_at, updated_at';
@@ -40,18 +40,14 @@ class Profile {
   /// Ein Profil ist vollständig, wenn Benutzer- und Anzeigename gesetzt sind.
   bool get isComplete => (username?.isNotEmpty ?? false) && displayName.trim().isNotEmpty;
 
-  Map<String, dynamic> toUpdateJson() => {
-        'username': username,
-        'display_name': displayName,
-        'avatar_url': avatarUrl,
-      };
+  Map<String, dynamic> toUpdateJson() => {'username': username, 'display_name': displayName, 'avatar_url': avatarUrl};
 
   Profile copyWith({String? username, String? displayName, String? avatarUrl}) => Profile(
-        id: id,
-        username: username ?? this.username,
-        displayName: displayName ?? this.displayName,
-        avatarUrl: avatarUrl ?? this.avatarUrl,
-        createdAt: createdAt,
-        updatedAt: updatedAt,
-      );
+    id: id,
+    username: username ?? this.username,
+    displayName: displayName ?? this.displayName,
+    avatarUrl: avatarUrl ?? this.avatarUrl,
+    createdAt: createdAt,
+    updatedAt: updatedAt,
+  );
 }

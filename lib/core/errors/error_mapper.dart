@@ -38,11 +38,7 @@ abstract final class ErrorMapper {
     final message = e.message.toLowerCase();
 
     if (code == 'invalid_credentials' || message.contains('invalid login credentials')) {
-      return AppException(
-        'E-Mail-Adresse oder Passwort ist falsch.',
-        kind: AppErrorKind.invalidCredentials,
-        cause: e,
-      );
+      return AppException('E-Mail-Adresse oder Passwort ist falsch.', kind: AppErrorKind.invalidCredentials, cause: e);
     }
     if (code == 'email_not_confirmed' || message.contains('email not confirmed')) {
       return AppException(
@@ -51,9 +47,7 @@ abstract final class ErrorMapper {
         cause: e,
       );
     }
-    if (code == 'user_already_exists' ||
-        code == 'email_exists' ||
-        message.contains('already registered')) {
+    if (code == 'user_already_exists' || code == 'email_exists' || message.contains('already registered')) {
       return AppException(
         'Für diese E-Mail-Adresse existiert bereits ein Konto.',
         kind: AppErrorKind.emailAlreadyRegistered,

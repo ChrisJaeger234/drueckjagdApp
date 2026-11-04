@@ -9,23 +9,23 @@ import 'package:flutter_test/flutter_test.dart';
 const _ts = '2026-11-04T06:00:00.000Z';
 
 Map<String, dynamic> _profileJson({String? username = 'max', String displayName = 'Max'}) => {
-      'id': 'u1',
-      'username': username,
-      'display_name': displayName,
-      'avatar_url': null,
-      'created_at': _ts,
-      'updated_at': _ts,
-    };
+  'id': 'u1',
+  'username': username,
+  'display_name': displayName,
+  'avatar_url': null,
+  'created_at': _ts,
+  'updated_at': _ts,
+};
 
 Map<String, dynamic> _groupJson() => {
-      'id': 'g1',
-      'name': 'Jagdfreunde',
-      'description': 'Test',
-      'created_by': 'u1',
-      'admins_can_manage_members': false,
-      'created_at': _ts,
-      'updated_at': _ts,
-    };
+  'id': 'g1',
+  'name': 'Jagdfreunde',
+  'description': 'Test',
+  'created_by': 'u1',
+  'admins_can_manage_members': false,
+  'created_at': _ts,
+  'updated_at': _ts,
+};
 
 void main() {
   group('Profile', () {
@@ -79,15 +79,15 @@ void main() {
 
   group('Einladungen', () {
     GroupInvite invite({String? expires, int? maxUses, int useCount = 0, String? revoked}) => GroupInvite.fromJson({
-          'id': 'i1',
-          'group_id': 'g1',
-          'created_by': 'u1',
-          'created_at': _ts,
-          'expires_at': expires,
-          'max_uses': maxUses,
-          'use_count': useCount,
-          'revoked_at': revoked,
-        });
+      'id': 'i1',
+      'group_id': 'g1',
+      'created_by': 'u1',
+      'created_at': _ts,
+      'expires_at': expires,
+      'max_uses': maxUses,
+      'use_count': useCount,
+      'revoked_at': revoked,
+    });
     final now = DateTime.parse('2026-11-05T00:00:00Z');
 
     test('Status', () {
@@ -124,10 +124,16 @@ void main() {
   });
 
   test('WaypointCategory entspricht dem Datenbank-Enum', () {
-    expect(
-      WaypointCategory.values.map((c) => c.value),
-      ['hochsitz', 'kanzel', 'kirrung', 'fuetterung', 'wildkamera', 'weg', 'gefahr', 'sonstiges'],
-    );
+    expect(WaypointCategory.values.map((c) => c.value), [
+      'hochsitz',
+      'kanzel',
+      'kirrung',
+      'fuetterung',
+      'wildkamera',
+      'weg',
+      'gefahr',
+      'sonstiges',
+    ]);
     expect(WaypointCategory.fromValue('unbekannt'), WaypointCategory.sonstiges);
   });
 }

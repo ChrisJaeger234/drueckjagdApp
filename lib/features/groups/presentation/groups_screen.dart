@@ -31,15 +31,11 @@ class GroupsScreen extends ConsumerWidget {
                 const EmptyState(
                   icon: Icons.groups_outlined,
                   title: 'Noch keine Gruppe',
-                  message:
-                      'Erstelle eine Jagdgruppe für deinen Freundeskreis oder tritt mit einem Einladungscode bei.',
+                  message: 'Erstelle eine Jagdgruppe für deinen Freundeskreis oder tritt mit einem Einladungscode bei.',
                 )
               else ...[
                 SectionHeader('Meine Gruppen (${groups.length})'),
-                for (final g in groups) ...[
-                  GroupCard(group: g),
-                  const SizedBox(height: AppSpacing.sm),
-                ],
+                for (final g in groups) ...[GroupCard(group: g), const SizedBox(height: AppSpacing.sm)],
               ],
             ],
           ),
@@ -57,11 +53,7 @@ class _GroupActions extends StatelessWidget {
     return Row(
       children: [
         Expanded(
-          child: AppButton(
-            label: 'Erstellen',
-            icon: Icons.add,
-            onPressed: () => context.push(Routes.groupCreate),
-          ),
+          child: AppButton(label: 'Erstellen', icon: Icons.add, onPressed: () => context.push(Routes.groupCreate)),
         ),
         const SizedBox(width: AppSpacing.sm),
         Expanded(

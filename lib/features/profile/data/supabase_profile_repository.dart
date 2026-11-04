@@ -11,23 +11,16 @@ class SupabaseProfileRepository implements ProfileRepository {
 
   @override
   Future<Profile> fetchProfile(String userId) => guard(() async {
-        final row = await _client.from('profiles').select(Profile.columns).eq('id', userId).single();
-        return Profile.fromJson(row);
-      });
+    final row = await _client.from('profiles').select(Profile.columns).eq('id', userId).single();
+    return Profile.fromJson(row);
+  });
 
   @override
-  Future<Profile> updateProfile({
-    required String userId,
-    required String username,
-    required String displayName,
-  }) =>
+  Future<Profile> updateProfile({required String userId, required String username, required String displayName}) =>
       guard(() async {
         final row = await _client
             .from('profiles')
-            .update({
-              'username': username.trim().toLowerCase(),
-              'display_name': displayName.trim(),
-            })
+            .update({'username': username.trim().toLowerCase(), 'display_name': displayName.trim()})
             .eq('id', userId)
             .select(Profile.columns)
             .single();

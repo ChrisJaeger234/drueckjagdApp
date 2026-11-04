@@ -25,7 +25,10 @@ class RoleBadge extends StatelessWidget {
         children: [
           Icon(icon, size: 14, color: fg),
           const SizedBox(width: 4),
-          Text(role.label, style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w700)),
+          Text(
+            role.label,
+            style: TextStyle(color: fg, fontSize: 12, fontWeight: FontWeight.w700),
+          ),
         ],
       ),
     );

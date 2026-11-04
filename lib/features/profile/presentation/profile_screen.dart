@@ -52,9 +52,8 @@ class ProfileScreen extends ConsumerWidget {
                 Text(
                   '@${p.username}',
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                        color: Theme.of(context).colorScheme.onSurfaceVariant,
-                      ),
+                  style: Theme.of(context).textTheme.bodyLarge
+                      ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                 ),
               const SizedBox(height: AppSpacing.lg),
               if (!p.isComplete) ...[

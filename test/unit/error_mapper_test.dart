@@ -28,18 +28,26 @@ void main() {
 
   group('ErrorMapper – Datenbank', () {
     test('Fehlerschlüssel der SQL-Funktionen', () {
-      expect(ErrorMapper.map(const PostgrestException(message: 'last_owner', code: '23514')).kind,
-          AppErrorKind.conflict);
-      expect(ErrorMapper.map(const PostgrestException(message: 'not_authorized', code: '42501')).kind,
-          AppErrorKind.forbidden);
-      expect(ErrorMapper.map(const PostgrestException(message: 'too_many_attempts', code: '54000')).kind,
-          AppErrorKind.rateLimited);
+      expect(
+        ErrorMapper.map(const PostgrestException(message: 'last_owner', code: '23514')).kind,
+        AppErrorKind.conflict,
+      );
+      expect(
+        ErrorMapper.map(const PostgrestException(message: 'not_authorized', code: '42501')).kind,
+        AppErrorKind.forbidden,
+      );
+      expect(
+        ErrorMapper.map(const PostgrestException(message: 'too_many_attempts', code: '54000')).kind,
+        AppErrorKind.rateLimited,
+      );
     });
     test('doppelter Benutzername', () {
-      final e = ErrorMapper.map(const PostgrestException(
-        message: 'duplicate key value violates unique constraint "profiles_username_key"',
-        code: '23505',
-      ));
+      final e = ErrorMapper.map(
+        const PostgrestException(
+          message: 'duplicate key value violates unique constraint "profiles_username_key"',
+          code: '23505',
+        ),
+      );
       expect(e.message, contains('Benutzername'));
     });
     test('fehlende Rechte', () {

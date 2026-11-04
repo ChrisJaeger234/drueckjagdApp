@@ -69,15 +69,14 @@ class FormErrorBanner extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     return Container(
       padding: const EdgeInsets.all(AppSpacing.sm),
-      decoration: BoxDecoration(
-        color: scheme.errorContainer,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-      ),
+      decoration: BoxDecoration(color: scheme.errorContainer, borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
       child: Row(
         children: [
           Icon(Icons.error_outline, color: scheme.onErrorContainer),
           const SizedBox(width: AppSpacing.sm),
-          Expanded(child: Text(message, style: TextStyle(color: scheme.onErrorContainer))),
+          Expanded(
+            child: Text(message, style: TextStyle(color: scheme.onErrorContainer)),
+          ),
         ],
       ),
     );

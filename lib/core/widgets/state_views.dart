@@ -46,20 +46,12 @@ class ErrorView extends StatelessWidget {
           children: [
             Icon(Icons.error_outline, size: 48, color: theme.colorScheme.error),
             const SizedBox(height: AppSpacing.md),
-            Text(
-              ErrorMapper.map(error).message,
-              textAlign: TextAlign.center,
-              style: theme.textTheme.bodyLarge,
-            ),
+            Text(ErrorMapper.map(error).message, textAlign: TextAlign.center, style: theme.textTheme.bodyLarge),
             if (onRetry != null) ...[
               const SizedBox(height: AppSpacing.lg),
               SizedBox(
                 width: 220,
-                child: AppButton.secondary(
-                  label: 'Erneut versuchen',
-                  icon: Icons.refresh,
-                  onPressed: onRetry,
-                ),
+                child: AppButton.secondary(label: 'Erneut versuchen', icon: Icons.refresh, onPressed: onRetry),
               ),
             ],
           ],
@@ -71,13 +63,7 @@ class ErrorView extends StatelessWidget {
 
 /// Leerer Zustand mit Icon, Titel, Erklärung und optionaler Aktion.
 class EmptyState extends StatelessWidget {
-  const EmptyState({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.message,
-    this.action,
-  });
+  const EmptyState({super.key, required this.icon, required this.title, required this.message, this.action});
 
   final IconData icon;
   final String title;
@@ -94,10 +80,7 @@ class EmptyState extends StatelessWidget {
         children: [
           Container(
             padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: theme.colorScheme.secondaryContainer,
-              shape: BoxShape.circle,
-            ),
+            decoration: BoxDecoration(color: theme.colorScheme.secondaryContainer, shape: BoxShape.circle),
             child: Icon(icon, size: 36, color: theme.colorScheme.onSecondaryContainer),
           ),
           const SizedBox(height: AppSpacing.md),

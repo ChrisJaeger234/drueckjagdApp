@@ -87,9 +87,7 @@ class _CreateInviteSheetState extends ConsumerState<_CreateInviteSheet> {
         Text('Gültigkeit', style: theme.textTheme.labelLarge),
         const SizedBox(height: AppSpacing.xs),
         SegmentedButton<int>(
-          segments: [
-            for (final e in _validityOptions.entries) ButtonSegment(value: e.key, label: Text(e.value)),
-          ],
+          segments: [for (final e in _validityOptions.entries) ButtonSegment(value: e.key, label: Text(e.value))],
           selected: {_validHours},
           onSelectionChanged: (s) => setState(() => _validHours = s.first),
         ),
@@ -141,7 +139,7 @@ class _CreateInviteSheetState extends ConsumerState<_CreateInviteSheet> {
           invite.expiresAt == null
               ? 'Gültig ohne Ablaufdatum.'
               : 'Gültig bis ${Formatters.dateTime(invite.expiresAt!)}. '
-                  'Teile den Code jetzt – er kann später nicht erneut angezeigt werden.',
+                    'Teile den Code jetzt – er kann später nicht erneut angezeigt werden.',
           textAlign: TextAlign.center,
           style: theme.textTheme.bodySmall,
         ),

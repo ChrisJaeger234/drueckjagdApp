@@ -86,10 +86,7 @@ class OverviewScreen extends ConsumerWidget {
                     )
                   : Column(
                       children: [
-                        for (final g in list) ...[
-                          GroupCard(group: g),
-                          const SizedBox(height: AppSpacing.sm),
-                        ],
+                        for (final g in list) ...[GroupCard(group: g), const SizedBox(height: AppSpacing.sm)],
                       ],
                     ),
             ),
@@ -106,10 +103,7 @@ class OverviewScreen extends ConsumerWidget {
                       clipBehavior: Clip.antiAlias,
                       child: Column(
                         children: [
-                          for (final (i, r) in list.indexed) ...[
-                            if (i > 0) const Divider(),
-                            RevierTile(revier: r),
-                          ],
+                          for (final (i, r) in list.indexed) ...[if (i > 0) const Divider(), RevierTile(revier: r)],
                         ],
                       ),
                     ),
@@ -182,10 +176,7 @@ class _Stat extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          value?.toString() ?? '–',
-          style: theme.textTheme.headlineMedium?.copyWith(color: AppColors.sand),
-        ),
+        Text(value?.toString() ?? '–', style: theme.textTheme.headlineMedium?.copyWith(color: AppColors.sand)),
         Text(label, style: theme.textTheme.bodySmall?.copyWith(color: AppColors.sandLight)),
       ],
     );

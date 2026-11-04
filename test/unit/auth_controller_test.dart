@@ -13,16 +13,16 @@ void main() {
   late ProviderContainer container;
 
   ProviderContainer create(FakeAuthRepository r) => ProviderContainer(
-        retry: (_, _) => null,
-        overrides: [
-          splashMinimumDurationProvider.overrideWithValue(Duration.zero),
-          appStartupProvider.overrideWith(
-            (ref) async => SupabaseClient('http://127.0.0.1:9', 'k',
-                authOptions: const AuthClientOptions(autoRefreshToken: false)),
-          ),
-          authRepositoryProvider.overrideWithValue(r),
-        ],
-      );
+    retry: (_, _) => null,
+    overrides: [
+      splashMinimumDurationProvider.overrideWithValue(Duration.zero),
+      appStartupProvider.overrideWith(
+        (ref) async =>
+            SupabaseClient('http://127.0.0.1:9', 'k', authOptions: const AuthClientOptions(autoRefreshToken: false)),
+      ),
+      authRepositoryProvider.overrideWithValue(r),
+    ],
+  );
 
   setUp(() {
     repo = FakeAuthRepository();
@@ -73,8 +73,9 @@ void main() {
 
   test('Registrierung einer vorhandenen E-Mail schlägt fehl', () async {
     await container.read(appStartupProvider.future);
-    final result =
-        await container.read(authControllerProvider.notifier).signUp(email: 'jaeger@example.de', password: 'waidmann1');
+    final result = await container
+        .read(authControllerProvider.notifier)
+        .signUp(email: 'jaeger@example.de', password: 'waidmann1');
     expect(result, isNull);
     expect(container.read(authControllerProvider).hasError, isTrue);
   });

@@ -116,8 +116,7 @@ class RevierDetailScreen extends ConsumerWidget {
                 spacing: AppSpacing.xs,
                 runSpacing: AppSpacing.xs,
                 children: [
-                  for (final c in WaypointCategory.values)
-                    Chip(avatar: Icon(c.icon, size: 18), label: Text(c.label)),
+                  for (final c in WaypointCategory.values) Chip(avatar: Icon(c.icon, size: 18), label: Text(c.label)),
                 ],
               ),
             ),

@@ -72,7 +72,11 @@ void main() {
   });
 
   testWidgets('Angemeldet: Gruppe erstellen, Revier anlegen, Vorschau-Tabs', (tester) async {
-    final app = TestApp(auth: FakeAuthRepository(signedIn: const AppUser(id: 'user-1', email: 'j@example.de')));
+    final app = TestApp(
+      auth: FakeAuthRepository(
+        signedIn: const AppUser(id: 'user-1', email: 'j@example.de'),
+      ),
+    );
     await tester.pumpWidget(app.build());
     await tester.pumpAndSettle();
     expect(find.text('Starte mit deiner Gruppe'), findsOneWidget);
@@ -108,7 +112,11 @@ void main() {
   });
 
   testWidgets('Member sieht keine Verwaltungsfunktionen', (tester) async {
-    final app = TestApp(auth: FakeAuthRepository(signedIn: const AppUser(id: 'user-1', email: 'j@example.de')));
+    final app = TestApp(
+      auth: FakeAuthRepository(
+        signedIn: const AppUser(id: 'user-1', email: 'j@example.de'),
+      ),
+    );
     final group = await app.groups.createGroup(name: 'Fremde Gruppe', description: '');
     app.groups.roles[group.id] = {'owner-x': GroupRole.owner, 'user-1': GroupRole.member};
 
@@ -123,7 +131,11 @@ void main() {
   });
 
   testWidgets('Profil bearbeiten und abmelden', (tester) async {
-    final app = TestApp(auth: FakeAuthRepository(signedIn: const AppUser(id: 'user-1', email: 'j@example.de')));
+    final app = TestApp(
+      auth: FakeAuthRepository(
+        signedIn: const AppUser(id: 'user-1', email: 'j@example.de'),
+      ),
+    );
     await tester.pumpWidget(app.build());
     await tester.pumpAndSettle();
 
@@ -153,7 +165,11 @@ void main() {
   });
 
   testWidgets('Mit Einladungscode beitreten', (tester) async {
-    final app = TestApp(auth: FakeAuthRepository(signedIn: const AppUser(id: 'user-1', email: 'j@example.de')));
+    final app = TestApp(
+      auth: FakeAuthRepository(
+        signedIn: const AppUser(id: 'user-1', email: 'j@example.de'),
+      ),
+    );
     final group = await app.groups.createGroup(name: 'Nachbarrevier', description: '');
     app.groups.roles[group.id] = {'owner-x': GroupRole.owner};
     final invite = await app.groups.createInvite(groupId: group.id);

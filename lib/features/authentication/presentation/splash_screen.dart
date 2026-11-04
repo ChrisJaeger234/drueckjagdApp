@@ -83,8 +83,10 @@ class _StartupProblem extends StatelessWidget {
           children: [
             Row(
               children: [
-                Icon(isConfig ? Icons.settings_suggest_outlined : Icons.cloud_off_outlined,
-                    color: theme.colorScheme.tertiary),
+                Icon(
+                  isConfig ? Icons.settings_suggest_outlined : Icons.cloud_off_outlined,
+                  color: theme.colorScheme.tertiary,
+                ),
                 const SizedBox(width: AppSpacing.xs),
                 Expanded(
                   child: Text(

@@ -14,14 +14,14 @@ class HuntingGroup {
   });
 
   factory HuntingGroup.fromJson(Map<String, dynamic> json) => HuntingGroup(
-        id: json['id'] as String,
-        name: json['name'] as String,
-        description: (json['description'] as String?) ?? '',
-        createdBy: json['created_by'] as String?,
-        adminsCanManageMembers: (json['admins_can_manage_members'] as bool?) ?? true,
-        createdAt: DateTime.parse(json['created_at'] as String),
-        updatedAt: DateTime.parse(json['updated_at'] as String),
-      );
+    id: json['id'] as String,
+    name: json['name'] as String,
+    description: (json['description'] as String?) ?? '',
+    createdBy: json['created_by'] as String?,
+    adminsCanManageMembers: (json['admins_can_manage_members'] as bool?) ?? true,
+    createdAt: DateTime.parse(json['created_at'] as String),
+    updatedAt: DateTime.parse(json['updated_at'] as String),
+  );
 
   static const columns = 'id, name, description, created_by, admins_can_manage_members, created_at, updated_at';
 
@@ -39,9 +39,9 @@ class MyGroup {
   const MyGroup({required this.group, required this.role});
 
   factory MyGroup.fromMembershipJson(Map<String, dynamic> json) => MyGroup(
-        group: HuntingGroup.fromJson(json['group'] as Map<String, dynamic>),
-        role: GroupRole.fromValue(json['role'] as String),
-      );
+    group: HuntingGroup.fromJson(json['group'] as Map<String, dynamic>),
+    role: GroupRole.fromValue(json['role'] as String),
+  );
 
   final HuntingGroup group;
   final GroupRole role;
@@ -62,13 +62,13 @@ class GroupMember {
   });
 
   factory GroupMember.fromJson(Map<String, dynamic> json) => GroupMember(
-        id: json['id'] as String,
-        groupId: json['group_id'] as String,
-        userId: json['user_id'] as String,
-        role: GroupRole.fromValue(json['role'] as String),
-        joinedAt: DateTime.parse(json['joined_at'] as String),
-        profile: json['profile'] == null ? null : Profile.fromJson(json['profile'] as Map<String, dynamic>),
-      );
+    id: json['id'] as String,
+    groupId: json['group_id'] as String,
+    userId: json['user_id'] as String,
+    role: GroupRole.fromValue(json['role'] as String),
+    joinedAt: DateTime.parse(json['joined_at'] as String),
+    profile: json['profile'] == null ? null : Profile.fromJson(json['profile'] as Map<String, dynamic>),
+  );
 
   static const columns = 'id, group_id, user_id, role, joined_at, profile:profiles(${Profile.columns})';
 

@@ -42,79 +42,71 @@ final routerProvider = Provider<GoRouter>((ref) {
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => AppShell(navigationShell: shell),
         branches: [
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.overview, builder: (_, _) => const OverviewScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.map, builder: (_, _) => const MapPreviewScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.groups,
-              builder: (_, _) => const GroupsScreen(),
-              routes: [
-                GoRoute(
-                  path: 'new',
-                  parentNavigatorKey: _rootKey,
-                  builder: (_, _) => const CreateGroupScreen(),
-                ),
-                GoRoute(
-                  path: 'join',
-                  parentNavigatorKey: _rootKey,
-                  builder: (_, _) => const JoinGroupScreen(),
-                ),
-                GoRoute(
-                  path: ':groupId',
-                  builder: (_, s) => GroupDetailScreen(groupId: s.pathParameters['groupId']!),
-                  routes: [
-                    GoRoute(
-                      path: 'edit',
-                      parentNavigatorKey: _rootKey,
-                      builder: (_, s) => EditGroupScreen(groupId: s.pathParameters['groupId']!),
-                    ),
-                    GoRoute(
-                      path: 'reviere/new',
-                      parentNavigatorKey: _rootKey,
-                      builder: (_, s) => RevierFormScreen(groupId: s.pathParameters['groupId']!),
-                    ),
-                    GoRoute(
-                      path: 'reviere/:revierId',
-                      builder: (_, s) => RevierDetailScreen(
-                        groupId: s.pathParameters['groupId']!,
-                        revierId: s.pathParameters['revierId']!,
+          StatefulShellBranch(
+            routes: [GoRoute(path: Routes.overview, builder: (_, _) => const OverviewScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: Routes.map, builder: (_, _) => const MapPreviewScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.groups,
+                builder: (_, _) => const GroupsScreen(),
+                routes: [
+                  GoRoute(path: 'new', parentNavigatorKey: _rootKey, builder: (_, _) => const CreateGroupScreen()),
+                  GoRoute(path: 'join', parentNavigatorKey: _rootKey, builder: (_, _) => const JoinGroupScreen()),
+                  GoRoute(
+                    path: ':groupId',
+                    builder: (_, s) => GroupDetailScreen(groupId: s.pathParameters['groupId']!),
+                    routes: [
+                      GoRoute(
+                        path: 'edit',
+                        parentNavigatorKey: _rootKey,
+                        builder: (_, s) => EditGroupScreen(groupId: s.pathParameters['groupId']!),
                       ),
-                      routes: [
-                        GoRoute(
-                          path: 'edit',
-                          parentNavigatorKey: _rootKey,
-                          builder: (_, s) => RevierFormScreen(
-                            groupId: s.pathParameters['groupId']!,
-                            revierId: s.pathParameters['revierId']!,
-                          ),
+                      GoRoute(
+                        path: 'reviere/new',
+                        parentNavigatorKey: _rootKey,
+                        builder: (_, s) => RevierFormScreen(groupId: s.pathParameters['groupId']!),
+                      ),
+                      GoRoute(
+                        path: 'reviere/:revierId',
+                        builder: (_, s) => RevierDetailScreen(
+                          groupId: s.pathParameters['groupId']!,
+                          revierId: s.pathParameters['revierId']!,
                         ),
-                      ],
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(path: Routes.chat, builder: (_, _) => const ChatPreviewScreen()),
-          ]),
-          StatefulShellBranch(routes: [
-            GoRoute(
-              path: Routes.profile,
-              builder: (_, _) => const ProfileScreen(),
-              routes: [
-                GoRoute(
-                  path: 'edit',
-                  parentNavigatorKey: _rootKey,
-                  builder: (_, _) => const EditProfileScreen(),
-                ),
-              ],
-            ),
-          ]),
+                        routes: [
+                          GoRoute(
+                            path: 'edit',
+                            parentNavigatorKey: _rootKey,
+                            builder: (_, s) => RevierFormScreen(
+                              groupId: s.pathParameters['groupId']!,
+                              revierId: s.pathParameters['revierId']!,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [GoRoute(path: Routes.chat, builder: (_, _) => const ChatPreviewScreen())],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: Routes.profile,
+                builder: (_, _) => const ProfileScreen(),
+                routes: [
+                  GoRoute(path: 'edit', parentNavigatorKey: _rootKey, builder: (_, _) => const EditProfileScreen()),
+                ],
+              ),
+            ],
+          ),
         ],
       ),
     ],

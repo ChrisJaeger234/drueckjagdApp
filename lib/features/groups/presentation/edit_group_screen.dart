@@ -64,7 +64,9 @@ class _EditGroupFormState extends ConsumerState<_EditGroupForm> {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     setState(() => _saving = true);
     try {
-      await ref.read(groupsRepositoryProvider).updateGroup(
+      await ref
+          .read(groupsRepositoryProvider)
+          .updateGroup(
             groupId: widget.group.id,
             name: _name.text,
             description: _description.text,

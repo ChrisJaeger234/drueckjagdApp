@@ -82,9 +82,7 @@ abstract final class AppTheme {
   static ThemeData _build(ColorScheme scheme) {
     final base = ThemeData(useMaterial3: true, colorScheme: scheme);
     final text = _textTheme(base.textTheme, scheme);
-    final roundedMd = RoundedRectangleBorder(
-      borderRadius: BorderRadius.circular(AppSpacing.radiusMd),
-    );
+    final roundedMd = RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusMd));
 
     return base.copyWith(
       textTheme: text,
@@ -120,16 +118,11 @@ abstract final class AppTheme {
           textStyle: text.labelLarge,
         ),
       ),
-      textButtonTheme: TextButtonThemeData(
-        style: TextButton.styleFrom(textStyle: text.labelLarge),
-      ),
+      textButtonTheme: TextButtonThemeData(style: TextButton.styleFrom(textStyle: text.labelLarge)),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
         fillColor: scheme.surfaceContainerLowest,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.md,
-          vertical: AppSpacing.md,
-        ),
+        contentPadding: const EdgeInsets.symmetric(horizontal: AppSpacing.md, vertical: AppSpacing.md),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
           borderSide: BorderSide(color: scheme.outlineVariant),
@@ -157,9 +150,7 @@ abstract final class AppTheme {
       dialogTheme: DialogThemeData(
         backgroundColor: scheme.surfaceContainerLow,
         surfaceTintColor: Colors.transparent,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusLg),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusLg)),
       ),
       bottomSheetTheme: BottomSheetThemeData(
         backgroundColor: scheme.surfaceContainerLow,
@@ -168,18 +159,12 @@ abstract final class AppTheme {
       ),
       snackBarTheme: SnackBarThemeData(
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
       ),
       chipTheme: base.chipTheme.copyWith(
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(AppSpacing.radiusSm)),
       ),
-      listTileTheme: const ListTileThemeData(
-        contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md),
-      ),
+      listTileTheme: const ListTileThemeData(contentPadding: EdgeInsets.symmetric(horizontal: AppSpacing.md)),
       dividerTheme: DividerThemeData(color: scheme.outlineVariant, space: 1),
     );
   }
@@ -187,21 +172,12 @@ abstract final class AppTheme {
   static TextTheme _textTheme(TextTheme base, ColorScheme scheme) {
     return base
         .copyWith(
-          displaySmall: base.displaySmall?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.5,
-          ),
-          headlineMedium: base.headlineMedium?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: -0.25,
-          ),
+          displaySmall: base.displaySmall?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.5),
+          headlineMedium: base.headlineMedium?.copyWith(fontWeight: FontWeight.w700, letterSpacing: -0.25),
           headlineSmall: base.headlineSmall?.copyWith(fontWeight: FontWeight.w700),
           titleLarge: base.titleLarge?.copyWith(fontWeight: FontWeight.w700),
           titleMedium: base.titleMedium?.copyWith(fontWeight: FontWeight.w600),
-          labelLarge: base.labelLarge?.copyWith(
-            fontWeight: FontWeight.w700,
-            letterSpacing: 0.3,
-          ),
+          labelLarge: base.labelLarge?.copyWith(fontWeight: FontWeight.w700, letterSpacing: 0.3),
           bodyLarge: base.bodyLarge?.copyWith(height: 1.45),
           bodyMedium: base.bodyMedium?.copyWith(height: 1.45),
         )

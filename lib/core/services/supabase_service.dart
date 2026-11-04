@@ -26,9 +26,7 @@ class DefaultSupabaseInitializer implements SupabaseInitializer {
   }
 }
 
-final supabaseInitializerProvider = Provider<SupabaseInitializer>(
-  (ref) => const DefaultSupabaseInitializer(),
-);
+final supabaseInitializerProvider = Provider<SupabaseInitializer>((ref) => const DefaultSupabaseInitializer());
 
 /// Mindestanzeigedauer des Startbildschirms (verhindert Flackern).
 final splashMinimumDurationProvider = Provider<Duration>((ref) => const Duration(milliseconds: 900));
@@ -52,14 +50,12 @@ final appStartupProvider = FutureProvider<SupabaseClient>((ref) async {
 
 /// Initialisierter Supabase-Client. Darf erst nach erfolgreichem
 /// [appStartupProvider] gelesen werden (der Router stellt das sicher).
-final supabaseClientProvider = Provider<SupabaseClient>(
-  (ref) => ref.watch(appStartupProvider).requireValue,
-);
+final supabaseClientProvider = Provider<SupabaseClient>((ref) => ref.watch(appStartupProvider).requireValue);
 
 /// Fehlende oder ungültige Konfiguration.
 class ConfigurationException extends AppException {
   ConfigurationException(this.problems)
-      : super('Die App ist noch nicht mit Supabase verbunden.', kind: AppErrorKind.configuration);
+    : super('Die App ist noch nicht mit Supabase verbunden.', kind: AppErrorKind.configuration);
 
   final List<String> problems;
 }

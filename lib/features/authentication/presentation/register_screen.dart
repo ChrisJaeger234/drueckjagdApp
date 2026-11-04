@@ -40,9 +40,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   Future<void> _submit() async {
     if (!(_formKey.currentState?.validate() ?? false)) return;
     FocusScope.of(context).unfocus();
-    final result = await ref
-        .read(authControllerProvider.notifier)
-        .signUp(email: _email.text, password: _password.text);
+    final result = await ref.read(authControllerProvider.notifier).signUp(email: _email.text, password: _password.text);
     if (!mounted) return;
     if (result == SignUpResult.confirmationRequired) {
       setState(() => _confirmationSentTo = _email.text.trim());
@@ -81,11 +79,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             const SizedBox(height: AppSpacing.lg),
             AppButton(label: 'Zur Anmeldung', onPressed: () => context.go(Routes.login)),
             const SizedBox(height: AppSpacing.xs),
-            AppButton.text(
-              label: 'E-Mail erneut senden',
-              isLoading: state.isLoading,
-              onPressed: _resend,
-            ),
+            AppButton.text(label: 'E-Mail erneut senden', isLoading: state.isLoading, onPressed: _resend),
           ],
         ),
       );
@@ -133,10 +127,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 validator: (v) => Validators.passwordConfirmation(v, _password.text),
                 onSubmitted: (_) => _submit(),
               ),
-              if (error != null) ...[
-                const SizedBox(height: AppSpacing.md),
-                FormErrorBanner(error.message),
-              ],
+              if (error != null) ...[const SizedBox(height: AppSpacing.md), FormErrorBanner(error.message)],
               const SizedBox(height: AppSpacing.lg),
               AppButton(label: 'Registrieren', isLoading: state.isLoading, onPressed: _submit),
               const SizedBox(height: AppSpacing.sm),

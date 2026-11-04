@@ -68,7 +68,18 @@ Details in [ARCHITECTURE.md](ARCHITECTURE.md), [DATABASE.md](DATABASE.md) und
    (`supabase test db`) und Integrationstests der Repositories gegen einen lokalen
    Supabase-Stack.
 
-## 3. Fortschritt
+## 3. Aktueller Stand
 
-Siehe [PHASE_1.md](PHASE_1.md) für den vollständigen Funktionsstand und den
-Abschlussbericht.
+| Bereich | Status |
+| --- | --- |
+| Projektstruktur, Designsystem, Navigation | fertig |
+| Supabase-Integration (Konfiguration, Start, Fehlerbehandlung) | fertig, lokal getestet |
+| Datenbank, RLS, Funktionen | fertig, 57 pgTAP-Tests grün |
+| Registrierung, Anmeldung, Abmeldung | fertig |
+| Profil | fertig (Profilbild-Upload: Phase 2) |
+| Gruppen, Rollen, Einladungen | fertig |
+| Reviere | fertig |
+| Karte, Chat | gekennzeichnete Vorschau (Phase 2) |
+| Verbindung zum eigenen Supabase-Cloud-Projekt | offen – benötigt Zugangsdaten |
+
+Vollständiger Abschlussbericht: [PHASE_1.md](PHASE_1.md).

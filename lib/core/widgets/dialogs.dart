@@ -36,12 +36,7 @@ void showAppSnackBar(BuildContext context, String message, {bool isError = false
   final scheme = Theme.of(context).colorScheme;
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: isError ? scheme.error : null,
-      ),
-    );
+    ..showSnackBar(SnackBar(content: Text(message), backgroundColor: isError ? scheme.error : null));
 }
 
 /// Zeigt einen Fehler einheitlich als SnackBar.
