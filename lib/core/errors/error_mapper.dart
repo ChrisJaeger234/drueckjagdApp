@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -101,9 +102,39 @@ abstract final class ErrorMapper {
     'use_leave_group': ('Um dich selbst zu entfernen, verlasse die Gruppe.', AppErrorKind.validation),
     'invalid_validity': ('Die Gültigkeitsdauer ist ungültig (1 Stunde bis 90 Tage).', AppErrorKind.validation),
     'invalid_max_uses': ('Die maximale Anzahl an Nutzungen ist ungültig (1–500).', AppErrorKind.validation),
+    // Phase 2 (Migrationen 0009/0010)
+    'invalid_boundary': (
+      'Die Fläche ist ungültig. Bitte zeichne ein geschlossenes Polygon oder importiere eine gültige Datei.',
+      AppErrorKind.validation,
+    ),
+    'not_a_group_member': ('Diese Person ist kein Mitglied der Gruppe.', AppErrorKind.validation),
+    'waypoint_not_in_group': ('Diese Einrichtung gehört nicht zu einem Revier der Gruppe.', AppErrorKind.validation),
   };
 
-  static AppException _mapPostgrest(PostgrestException e) {
+  /// postgrest-dart (2.9) verpackt Fehler bei `.maybeSingle()` falsch: Die
+  /// Nachricht enthält dann den rohen JSON-Text der Antwort und `code` ist der
+  /// HTTP-Status. Hier wird die eigentliche Fehlermeldung wiederhergestellt.
+  static PostgrestException _unwrap(PostgrestException e) {
+    final raw = e.message.trimLeft();
+    if (!raw.startsWith('{')) return e;
+    try {
+      final json = jsonDecode(raw);
+      if (json is Map<String, dynamic> && json['message'] is String) {
+        return PostgrestException(
+          message: json['message'] as String,
+          code: json['code']?.toString() ?? e.code,
+          details: json['details'] ?? e.details,
+          hint: json['hint']?.toString() ?? e.hint,
+        );
+      }
+    } on FormatException {
+      // kein JSON – Original verwenden
+    }
+    return e;
+  }
+
+  static AppException _mapPostgrest(PostgrestException original) {
+    final e = _unwrap(original);
     final rpc = _rpcMessages[e.message];
     if (rpc != null) return AppException(rpc.$1, kind: rpc.$2, cause: e);
 
@@ -118,6 +149,16 @@ abstract final class ErrorMapper {
             kind: AppErrorKind.conflict,
             cause: e,
           );
+        }
+        if (e.message.contains('hunt_stands_label_key')) {
+          return AppException(
+            'In dieser Jagd gibt es bereits einen Stand mit dieser Bezeichnung.',
+            kind: AppErrorKind.conflict,
+            cause: e,
+          );
+        }
+        if (e.message.contains('hunt_participants_unique')) {
+          return AppException('Diese Person ist bereits eingetragen.', kind: AppErrorKind.conflict, cause: e);
         }
         return AppException('Dieser Eintrag existiert bereits.', kind: AppErrorKind.conflict, cause: e);
       case '23514':

@@ -18,6 +18,10 @@ import 'package:drueckjagd_app/features/groups/data/supabase_groups_repository.d
 import 'package:drueckjagd_app/features/groups/domain/group_invite.dart';
 import 'package:drueckjagd_app/features/groups/domain/group_role.dart';
 import 'package:drueckjagd_app/features/hunting_grounds/data/supabase_reviere_repository.dart';
+import 'package:drueckjagd_app/features/hunts/data/supabase_hunts_repository.dart';
+import 'package:drueckjagd_app/features/hunts/domain/hunt.dart';
+import 'package:drueckjagd_app/features/hunts/domain/hunt_enums.dart';
+import 'package:drueckjagd_app/features/hunts/domain/hunt_report.dart';
 import 'package:drueckjagd_app/features/profile/data/supabase_profile_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -40,6 +44,7 @@ class _Actor {
     profiles = SupabaseProfileRepository(client);
     groups = SupabaseGroupsRepository(client);
     reviere = SupabaseReviereRepository(client);
+    hunts = SupabaseHuntsRepository(client);
   }
 
   final String name;
@@ -48,6 +53,7 @@ class _Actor {
   late final SupabaseProfileRepository profiles;
   late final SupabaseGroupsRepository groups;
   late final SupabaseReviereRepository reviere;
+  late final SupabaseHuntsRepository hunts;
 
   late final String email = '$name.${DateTime.now().microsecondsSinceEpoch}@test.local';
   static const password = 'Waidmann2026';
@@ -230,6 +236,83 @@ void main() {
 
       await alice.groups.deleteGroup(groupId);
       expect(await alice.groups.fetchMyGroups(alice.id), isEmpty);
+    });
+  });
+  group('Jagden, Stände und Meldungen (Phase 2)', skip: _skip, () {
+    test('Jagd anlegen, selbst eintragen, Stand zuteilen, melden, Nachsuche erledigen', () async {
+      final group = await alice.groups.createGroup(
+        name: 'Jagdtest ${DateTime.now().millisecondsSinceEpoch}',
+        description: '',
+      );
+      final invite = await alice.groups.createInvite(groupId: group.id);
+      await bob.groups.redeemInvite(invite.code);
+      final revier = await alice.reviere.create(
+        groupId: group.id,
+        createdBy: alice.id,
+        name: 'Eichenhain',
+        description: '',
+      );
+
+      final hunt = await alice.hunts.create(
+        groupId: group.id,
+        draft: HuntDraft(
+          title: 'Drückjagd',
+          startsAt: DateTime.now().add(const Duration(days: 7)),
+          revierId: revier.id,
+        ),
+      );
+      expect(hunt.revierName, 'Eichenhain');
+      final lead = await alice.hunts.fetchParticipants(hunt.id);
+      expect(lead.single.role, HuntRole.jagdleiter, reason: 'Ersteller wird Jagdleiter');
+
+      final zone = await alice.hunts.createZone(
+        huntId: hunt.id,
+        name: 'Treiben 1',
+        kind: HuntZoneKind.treiben,
+        boundary: {
+          'type': 'Polygon',
+          'coordinates': [
+            [
+              [9.5, 51.5],
+              [9.6, 51.5],
+              [9.6, 51.6],
+              [9.5, 51.5],
+            ],
+          ],
+        },
+      );
+      expect(zone.boundary['type'], 'MultiPolygon');
+      final stand = await alice.hunts.createStand(
+        huntId: hunt.id,
+        label: 'Stand 1',
+        latitude: 51.55,
+        longitude: 9.55,
+        zoneId: zone.id,
+      );
+
+      // Bob trägt sich selbst ein, darf sich aber keinen Stand nehmen.
+      final bobPart = await bob.hunts.join(huntId: hunt.id, role: HuntRole.schuetze);
+      await expectLater(
+        bob.hunts.assign(participantId: bobPart.id, standId: stand.id),
+        _appError(AppErrorKind.forbidden),
+      );
+      final assigned = await alice.hunts.assign(participantId: bobPart.id, standId: stand.id);
+      expect(assigned.standId, stand.id);
+
+      final report = await bob.hunts.createReport(
+        HuntReportDraft(huntId: hunt.id, kind: HuntReportKind.angeschossen, species: 'Schwarzwild', standId: stand.id),
+      );
+      expect(report.isOpenFollowUp, isTrue);
+      final resolved = await alice.hunts.setReportResolved(reportId: report.id, resolved: true);
+      expect(resolved.resolvedBy, alice.id);
+
+      // Außenstehende sehen nichts, Mitglieder löschen keine Jagd.
+      await expectLater(mallory.hunts.fetchById(hunt.id), _appError(AppErrorKind.notFound));
+      expect(await mallory.hunts.fetchReports(hunt.id), isEmpty);
+      await expectLater(bob.hunts.delete(hunt.id), _appError(AppErrorKind.forbidden));
+
+      await alice.hunts.delete(hunt.id);
+      await alice.groups.deleteGroup(group.id);
     });
   });
 }

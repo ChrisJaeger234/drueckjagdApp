@@ -12,6 +12,9 @@ in Dateinamensreihenfolge ausgeführt.
 | `20261104000005_storage_avatars.sql` | Privater Storage-Bucket `avatars` mit Policies |
 | `20261104000006_review_hardening.sql` | Härtung nach Review: Sperren gegen Owner-Race-Conditions, robustes Einlösen, automatischer Owner-Nachfolger bei Kontolöschung, Standardwerte `auth.uid()`, FK-Indizes |
 | `20261104000007_rls_security_test_fixes.sql` | Fixes aus dem Sicherheitstest: entfernte Mitglieder können ältere Einladungscodes nicht mehr nutzen (`group_member_removals`), `remove_group_member` verrät keine Mitgliedschaften |
+| `20261104000008_waypoint_categories.sql` | Neue Einrichtungs-Kategorien (Drückjagdbock, Ansitzleiter, Salzlecke, Suhle, Wildacker, Sammelplatz, Parkplatz) |
+| `20261104000009_postgis_geometries.sql` | PostGIS-Spalten `geom` für Reviergrenzen (MultiPolygon, per Trigger aus GeoJSON), Wegpunkte und Standorte (Punkt, generiert), GiST-Indizes |
+| `20261104000010_hunts.sql` | Jagden: `hunts`, `hunt_zones`, `hunt_stands`, `hunt_participants`, `hunt_reports` mit RLS, Integritäts-Triggern und Berechtigungsfunktionen |
 
 ## Tabellen
 
@@ -76,9 +79,16 @@ Kein Clientzugriff.
 | created_by | uuid | FK → profiles, `SET NULL` |
 | created_at, updated_at | timestamptz | |
 
-### revier_boundaries (vorbereitet)
-`revier_id` (FK, `CASCADE`), `boundary_data jsonb` (GeoJSON-Objekt mit `type`).
-In Phase 2 kommt eine Spalte `geometry(MultiPolygon, 4326)` mit GiST-Index dazu.
+### revier_boundaries
+`revier_id` (FK, `CASCADE`), `boundary_data jsonb`, `geom geometry(MultiPolygon, 4326)`.
+
+Seit 0009 setzt der Trigger `revier_boundaries_sync_geom` bei jedem Speichern
+`geom` aus `boundary_data` und schreibt `boundary_data` als normalisiertes
+GeoJSON-MultiPolygon zurück (7 Nachkommastellen ≈ 1 cm). Angenommen werden
+`Polygon`, `MultiPolygon`, `Feature` und `FeatureCollection` (Nicht-Flächen
+werden ignoriert, mehrere Flächen vereinigt). Ungültige Geometrien werden mit
+`ST_MakeValid` repariert. Abgelehnt (`invalid_boundary`) werden leere Flächen,
+Koordinaten außerhalb von WGS84 und mehr als 100 000 Punkte.
 
 > Hinweis: Im Auftrag stand `revir_boundaries` – das wurde als Tippfehler
 > gewertet und die Tabelle konsistent `revier_boundaries` genannt.
@@ -86,11 +96,53 @@ In Phase 2 kommt eine Spalte `geometry(MultiPolygon, 4326)` mit GiST-Index dazu.
 ### waypoints (vorbereitet)
 `revier_id`, `created_by`, `name`, `description`, `category`
 (`hochsitz`, `kanzel`, `kirrung`, `fuetterung`, `wildkamera`, `weg`, `gefahr`,
-`sonstiges`), `latitude` (−90…90), `longitude` (−180…180), Zeitstempel.
+`sonstiges`; seit 0008 zusätzlich `drueckjagdbock`, `ansitzleiter`, `salzlecke`,
+`suhle`, `wildacker`, `sammelplatz`, `parkplatz`), `latitude` (−90…90),
+`longitude` (−180…180), `geom geography(Point, 4326)` (generiert), Zeitstempel.
 
 ### locations (vorbereitet)
 `user_id`, `group_id`, `latitude`, `longitude`, `accuracy` (≥ 0), `recorded_at`.
 Indizes auf `(group_id, recorded_at desc)` und `(user_id, recorded_at desc)`.
+
+### hunts
+Jagd einer Gruppe. `group_id`, `revier_id` (optional; muss zur selben Gruppe
+gehören – zusammengesetzter Fremdschlüssel, wird beim Löschen des Reviers
+`NULL`), `title` (2–120), `description`, `starts_at`, `ends_at` (> Beginn),
+`status` (`geplant`, `laufend`, `beendet`, `abgesagt`), `meeting_point`,
+`meeting_latitude`/`meeting_longitude` (beide oder keine), `game_release`
+(Freigabe), `safety_notes`, `emergency_info`, `self_join` (Standard `true`),
+`created_by` (Standard `auth.uid()`). Index `(group_id, starts_at desc)`.
+
+Trigger `hunts_add_creator`: Wer die Jagd anlegt, wird Teilnehmer mit Rolle
+`jagdleiter`.
+
+### hunt_zones
+Flächen einer Jagd: `name`, `kind` (`treiben`, `sicherheitszone`, `sperrzone`,
+`sammelplatz`, `sonstiges`), `description`, `color` (`#RRGGBB`),
+`boundary_data` + `geom` (wie `revier_boundaries`).
+
+### hunt_stands
+Stände einer Jagd: `label` (eindeutig je Jagd, ohne Groß-/Kleinschreibung),
+`waypoint_id` (optional, muss zur Gruppe gehören → sonst `waypoint_not_in_group`),
+`zone_id` (Zone derselben Jagd), `latitude`, `longitude`, `geom` (generiert),
+`description` (z. B. Schussrichtung), `sort_order`.
+
+### hunt_participants
+`hunt_id`, `user_id` (Standard `auth.uid()`), `role` (`jagdleiter`, `ansteller`,
+`schuetze`, `treiber`, `hundefuehrer`, `bergung`, `sonstige`), `stand_id` und
+`zone_id` (nur aus derselben Jagd, zusammengesetzte Fremdschlüssel; beim Löschen
+des Stands/der Zone `NULL`), `note`. Eindeutig: `(hunt_id, user_id)`.
+
+Trigger `hunt_participants_guard` (siehe SECURITY.md) prüft Mitgliedschaft,
+Leitungsrollen und Zuteilungen. Trigger `group_members_remove_hunt_participation`
+entfernt Teilnahmen, wenn jemand die Gruppe verlässt.
+
+### hunt_reports
+`hunt_id`, `reporter_id` (Standard `auth.uid()`), `kind` (`erlegt`,
+`angeschossen`, `ueberschossen`, `anblick`, `sonstiges`), `species` (frei, max.
+60), `count` (1–100), `stand_id` (derselben Jagd), `latitude`/`longitude`
+(optional, beide oder keine) + `geom`, `note`, `occurred_at`, `resolved_at`,
+`resolved_by` (vom Server gesetzt, nicht beschreibbar).
 
 ### messages (vorbereitet)
 `group_id`, `sender_id` (`SET NULL`, Nachricht bleibt erhalten), `content`
@@ -102,7 +154,11 @@ Indizes auf `(group_id, recorded_at desc)` und `(user_id, recorded_at desc)`.
   in Gruppen, Revieren, Wegpunkten und Nachrichten wird der Verweis auf `NULL` gesetzt.
 - Gruppe löschen → Mitgliedschaften, Einladungen, Reviere (inkl. Grenzen und
   Wegpunkte), Standorte und Nachrichten der Gruppe werden gelöscht.
-- Revier löschen → Grenzen und Wegpunkte werden gelöscht.
+- Revier löschen → Grenzen und Wegpunkte werden gelöscht; Jagden bleiben,
+  ihr `revier_id` wird `NULL`; Stände verlieren die Verknüpfung zur Einrichtung.
+- Jagd löschen → Zonen, Stände, Teilnehmer und Meldungen werden gelöscht.
+- Mitglied verlässt die Gruppe → seine Teilnahmen an deren Jagden werden
+  gelöscht, seine Meldungen bleiben erhalten.
 - Konto des letzten Owners gelöscht → das dienstälteste Mitglied (Admins zuerst)
   wird automatisch Owner; ist niemand mehr übrig, wird die leere Gruppe gelöscht
   (Trigger `group_members_ensure_owner`, Migration 0006).
@@ -128,7 +184,8 @@ dass kein anderer Benutzer eingetragen wird.
 
 Fehler werden als stabile Schlüssel gemeldet (`not_authenticated`,
 `not_authorized`, `last_owner`, `member_not_found`, `too_many_attempts`,
-`use_leave_group`, `invalid_validity`, `invalid_max_uses`) und in der App in
+`use_leave_group`, `invalid_validity`, `invalid_max_uses`; seit Phase 2
+`invalid_boundary`, `not_a_group_member`, `waypoint_not_in_group`) und in der App in
 deutsche Texte übersetzt (`ErrorMapper`).
 
 ## Migrationen ausführen

@@ -11,7 +11,7 @@ Flutter-App (iOS/Android)
 Supabase           ▼
  ├─ Auth          E-Mail + Passwort, E-Mail-Bestätigung (konfigurierbar)
  ├─ PostgreSQL    Tabellen, RLS-Policies, SECURITY-DEFINER-Funktionen
- ├─ PostGIS       aktiviert, Nutzung ab Phase 2
+ ├─ PostGIS       Geometrien für Grenzen, Zonen, Einrichtungen, Stände (ab 0009)
  └─ Storage       privater Bucket „avatars“ (vorbereitet)
 ```
 
@@ -41,6 +41,7 @@ lib/
     profile/                     Profil anzeigen/bearbeiten
     groups/                      Gruppen, Mitglieder, Rollen, Einladungen
     hunting_grounds/             Reviere
+    hunts/                       Jagden, Teilnehmer, Zonen, Stände, Meldungen (Phase 2)
     overview/                    Übersicht (Dashboard)
     map/                         Phase 1: Vorschau + Wegpunkt-Kategorien (Domain)
     chat/                        Phase 1: Vorschau

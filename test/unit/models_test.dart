@@ -127,10 +127,17 @@ void main() {
     expect(WaypointCategory.values.map((c) => c.value), [
       'hochsitz',
       'kanzel',
+      'drueckjagdbock',
+      'ansitzleiter',
       'kirrung',
       'fuetterung',
+      'salzlecke',
+      'suhle',
+      'wildacker',
       'wildkamera',
       'weg',
+      'sammelplatz',
+      'parkplatz',
       'gefahr',
       'sonstiges',
     ]);
