@@ -26,6 +26,15 @@ async function newUser(name) {
   contexts[name] = context;
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
+  if (process.env.DEBUG_CHAT) {
+    page.on('response', (r) => r.url().includes('/rest/v1/messages') && console.log(`  ${name} ${r.request().method()} ${r.status()} ${new Date().toISOString().slice(17, 23)}`));
+    page.on('requestfailed', (r) => console.log(`  ${name} FAILED ${r.url()} ${r.failure()?.errorText}`));
+    page.on('console', (m) => m.type() === 'error' && console.log(`  ${name} console: ${m.text()}`));
+  }
+  if (process.env.CPU_THROTTLE) {
+    const cdp = await context.newCDPSession(page);
+    await cdp.send('Emulation.setCPUThrottlingRate', { rate: Number(process.env.CPU_THROTTLE) });
+  }
   await page.goto(new globalThis.URL('registrieren', URL).toString());
   await page.getByLabel('E-Mail').fill(`${name}-${stamp}@example.com`);
   await page.getByLabel('Passwort', { exact: true }).fill('waidmann1');
@@ -72,7 +81,14 @@ check(await visible(ben.getByText('Treffen 7 Uhr am Hof'), 8000), 'Ben sieht die
 check(await visible(ben.getByRole('list', { name: 'Nachrichten' }).getByText('Anna', { exact: true })), 'mit Absendername');
 
 await send(ben, 'Bin dabei, bringe den Hund mit');
-check(await visible(anna.getByText('Bin dabei, bringe den Hund mit'), 8000), 'Anna sieht Bens Antwort sofort');
+const replied = await visible(anna.getByText('Bin dabei, bringe den Hund mit'), 8000);
+check(replied, 'Anna sieht Bens Antwort sofort');
+if (!replied) {
+  // Diagnose: ist die Nachricht überhaupt angekommen, und was zeigt Ben?
+  console.log(`  Ben zeigt: ${(await ben.getByRole('list', { name: 'Nachrichten' }).innerText()).replace(/\n/g, ' | ')}`);
+  await anna.reload();
+  console.log(`  Anna nach Neuladen: ${(await anna.getByRole('list', { name: 'Nachrichten' }).innerText({ timeout: 10000 })).replace(/\n/g, ' | ')}`);
+}
 
 // Funkloch
 await contexts.Ben.setOffline(true);

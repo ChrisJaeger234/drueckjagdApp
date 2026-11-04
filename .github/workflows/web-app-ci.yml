@@ -81,4 +81,4 @@ jobs:
           NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/offline-local.mjs
           NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/offline-maps-local.mjs
           NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/live-local.mjs
-          NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/chat-local.mjs
+          NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ DEBUG_CHAT=1 node e2e/chat-local.mjs
