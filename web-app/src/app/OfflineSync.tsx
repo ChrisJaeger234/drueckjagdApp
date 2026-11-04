@@ -37,8 +37,10 @@ export function OfflineSync({ persist }: { persist: boolean }) {
       // Offline-Karten enthalten Reviergebiete und gehören zum Benutzer.
       void deleteAllPacks();
       liveStore.stop();
+      // Das Gerät soll keine Benachrichtigungen für den abgemeldeten Benutzer mehr bekommen.
+      void services.push.disable();
     }
-  }, [status, client]);
+  }, [status, client, services]);
 
   return null;
 }

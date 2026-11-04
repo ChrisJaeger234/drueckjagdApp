@@ -1,0 +1,25 @@
+name: Edge Function „notify“ veröffentlichen
+
+# Manuell starten (Actions → „Edge Function „notify“ veröffentlichen“ → Run workflow).
+# Benötigt einmalig unter Settings → Secrets and variables → Actions:
+#   * Secret   SUPABASE_ACCESS_TOKEN  (Supabase → Account → Access Tokens)
+#   * Variable SUPABASE_PROJECT_REF   (die Projekt-ID aus der Supabase-URL)
+# Die VAPID-Schlüssel liegen als Secrets in Supabase (Edge Functions → Secrets), nicht hier.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: 2.122.1
+      - name: Veröffentlichen
+        env:
+          SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
+        run: supabase functions deploy notify --project-ref "${{ vars.SUPABASE_PROJECT_REF }}" --no-verify-jwt --use-api

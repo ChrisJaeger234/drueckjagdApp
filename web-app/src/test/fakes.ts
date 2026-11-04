@@ -28,6 +28,7 @@ import {
 import type { HuntsService } from '../features/hunts/huntsService';
 import { sortMessages, type ChatMessage, type MessageInput } from '../features/chat/chatModel';
 import type { ChatService } from '../features/chat/chatService';
+import type { NotifyRequest, PushService, PushSettings, PushState, PushStatus } from '../features/push/pushService';
 
 /** In-Memory-Auth für Tests (wie FakeAuthRepository in der Flutter-App). */
 export class FakeAuth implements AuthService {
@@ -542,5 +543,36 @@ export class FakeChat implements ChatService {
     set.add(onChange);
     this.listeners.set(groupId, set);
     return () => void set.delete(onChange);
+  }
+}
+
+export class FakePush implements PushService {
+  state: PushState = 'off';
+  settings: PushSettings = { chat: true, reports: true };
+  notified: NotifyRequest[] = [];
+  /** Simuliert die Ablehnung im Erlauben-Dialog. */
+  deny = false;
+  disabled = 0;
+
+  async status(): Promise<PushStatus> {
+    return { state: this.state, settings: { ...this.settings } };
+  }
+  async enable(settings: PushSettings) {
+    if (this.deny) {
+      this.state = 'denied';
+      throw new AppError('Benachrichtigungen wurden nicht erlaubt. Das lässt sich in den Einstellungen des Geräts ändern.', 'forbidden');
+    }
+    this.state = 'on';
+    this.settings = { ...settings };
+  }
+  async update(settings: PushSettings) {
+    this.settings = { ...settings };
+  }
+  async disable() {
+    this.disabled++;
+    if (this.state === 'on') this.state = 'off';
+  }
+  async notify(request: NotifyRequest) {
+    this.notified.push(request);
   }
 }

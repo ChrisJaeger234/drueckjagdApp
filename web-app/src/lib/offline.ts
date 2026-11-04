@@ -50,9 +50,13 @@ const retryOffline = {
  * Funktion muss hier stehen (nicht nur im Hook), sonst weiß der wiederhergestellte Cache nicht,
  * wie er die gespeicherte Meldung senden soll.
  */
-export function registerOfflineMutations(client: QueryClient, services: Pick<Services, 'hunts' | 'chat'>, userId: string) {
+export function registerOfflineMutations(client: QueryClient, services: Pick<Services, 'hunts' | 'chat' | 'push'>, userId: string) {
   client.setMutationDefaults(REPORT_MUTATION_KEY, {
-    mutationFn: ({ huntId, input }: ReportVariables) => services.hunts.createReport(huntId, input),
+    mutationFn: async ({ huntId, input }: ReportVariables) => {
+      await services.hunts.createReport(huntId, input);
+      // Erst nach dem Speichern, damit auch eine im Funkloch gemeldete Nachsuche alarmiert.
+      if (input.kind === 'angeschossen') void services.push.notify({ type: 'report', id: input.id });
+    },
     ...retryOffline,
     onMutate: async ({ huntId, input }: ReportVariables) => {
       await client.cancelQueries({ queryKey: reportsKey(huntId) });
@@ -66,7 +70,10 @@ export function registerOfflineMutations(client: QueryClient, services: Pick<Ser
   });
 
   client.setMutationDefaults(MESSAGE_MUTATION_KEY, {
-    mutationFn: ({ groupId, input }: MessageVariables) => services.chat.send(groupId, input),
+    mutationFn: async ({ groupId, input }: MessageVariables) => {
+      await services.chat.send(groupId, input);
+      void services.push.notify({ type: 'message', id: input.id });
+    },
     ...retryOffline,
     onMutate: async ({ groupId, input }: MessageVariables) => {
       await client.cancelQueries({ queryKey: chatKey(groupId) });

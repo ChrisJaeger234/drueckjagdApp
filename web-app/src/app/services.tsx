@@ -3,6 +3,7 @@ import type { AuthService } from '../features/auth/authService';
 import type { ChatService } from '../features/chat/chatService';
 import type { GroupsService } from '../features/groups/groupsService';
 import type { HuntsService } from '../features/hunts/huntsService';
+import type { PushService } from '../features/push/pushService';
 import type { ProfileService } from '../features/profile/profileService';
 import type { ReviereService } from '../features/reviere/reviereService';
 
@@ -14,6 +15,7 @@ export interface Services {
   reviere: ReviereService;
   hunts: HuntsService;
   chat: ChatService;
+  push: PushService;
 }
 
 const ServicesContext = createContext<Services | null>(null);
