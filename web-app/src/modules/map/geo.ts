@@ -123,3 +123,42 @@ export function areaHectares(g: Polygon | MultiPolygon): number {
   const total = g.type === 'Polygon' ? polyArea(g.coordinates) : g.coordinates.reduce((a, p) => a + polyArea(p), 0);
   return total / 10000;
 }
+
+// ------------------------------------------------------------ Kacheln
+
+export function lonToTileX(lon: number, z: number): number {
+  return Math.floor(((lon + 180) / 360) * 2 ** z);
+}
+
+export function latToTileY(lat: number, z: number): number {
+  const rad = (lat * Math.PI) / 180;
+  return Math.floor(((1 - Math.asinh(Math.tan(rad)) / Math.PI) / 2) * 2 ** z);
+}
+
+/** Alle Kacheln, die das Gebiet zwischen minZoom und maxZoom abdecken. */
+export function tilesForBbox(bbox: Bbox, minZoom: number, maxZoom: number): { z: number; x: number; y: number }[] {
+  const tiles: { z: number; x: number; y: number }[] = [];
+  for (let z = minZoom; z <= maxZoom; z++) {
+    const x0 = lonToTileX(bbox.west, z);
+    const x1 = lonToTileX(bbox.east, z);
+    const y0 = latToTileY(bbox.north, z);
+    const y1 = latToTileY(bbox.south, z);
+    for (let x = x0; x <= x1; x++) for (let y = y0; y <= y1; y++) tiles.push({ z, x, y });
+  }
+  return tiles;
+}
+
+export function countTiles(bbox: Bbox, minZoom: number, maxZoom: number): number {
+  let n = 0;
+  for (let z = minZoom; z <= maxZoom; z++) {
+    n += (lonToTileX(bbox.east, z) - lonToTileX(bbox.west, z) + 1) * (latToTileY(bbox.south, z) - latToTileY(bbox.north, z) + 1);
+  }
+  return n;
+}
+
+/** Rechteck um `meters` in jede Richtung vergrößern (Rand ums Revier, z. B. für Nachsuchen). */
+export function padBbox(b: Bbox, meters: number): Bbox {
+  const dLat = meters / 111_320;
+  const dLng = meters / (111_320 * Math.cos((((b.north + b.south) / 2) * Math.PI) / 180));
+  return { west: b.west - dLng, south: b.south - dLat, east: b.east + dLng, north: b.north + dLat };
+}

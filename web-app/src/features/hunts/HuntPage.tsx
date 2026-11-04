@@ -12,6 +12,7 @@ import type { MapMarker } from '../../modules/map/MapView';
 import { useOwnPosition } from '../../modules/map/useOwnPosition';
 import { useUser } from '../auth/AuthContext';
 import { useMyGroup } from '../groups/useGroups';
+import { OfflineMapHint } from '../offlineMaps/OfflineMapHint';
 import { MapToolbar } from '../reviere/mapControls';
 import { useBoundaries } from '../reviere/useReviere';
 import { formatHuntTime } from './format';
@@ -112,6 +113,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
             </Link>
           </p>
         )}
+        {hunt.revierId && <OfflineMapHint revierId={hunt.revierId} />}
         {hunt.meetingPoint && <Info label="Treffpunkt" text={hunt.meetingPoint} />}
         {hunt.gameRelease && <Info label="Freigabe" text={hunt.gameRelease} />}
         {hunt.description && <p className="whitespace-pre-line text-sm">{hunt.description}</p>}

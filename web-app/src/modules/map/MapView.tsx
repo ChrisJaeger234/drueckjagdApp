@@ -4,7 +4,8 @@ import type { FeatureCollection, Position } from 'geojson';
 import { useEffect, useRef, useState } from 'react';
 import type { Boundary } from '../../features/reviere/revierModel';
 import { DEFAULT_CENTER, type Bbox } from './geo';
-import { baseStyle, nrwDopUrl, type LayerId } from './layers';
+import { baseStyle, LAYER_IDS, LAYERS, parseProtocolUrl, type LayerId } from './layers';
+import { loadTile, tileStats } from './tileStore';
 
 export interface OwnPosition {
   lat: number;
@@ -52,12 +53,13 @@ let protocolAdded = false;
 function ensureProtocol() {
   if (protocolAdded) return;
   protocolAdded = true;
-  maplibregl.addProtocol('nrwdop', async (params, abort) => {
-    const [z, x, y] = params.url.replace('nrwdop://', '').split('/').map(Number) as [number, number, number];
-    const res = await fetch(nrwDopUrl(z, x, y), { signal: abort.signal });
-    if (!res.ok) throw new Error(`Kachel ${res.status}`);
-    return { data: await res.arrayBuffer() };
-  });
+  for (const id of LAYER_IDS) {
+    maplibregl.addProtocol(LAYERS[id].protocol, async (params, abort) => {
+      const parsed = parseProtocolUrl(params.url);
+      if (!parsed) throw new Error(`Ungültige Kachel ${params.url}`);
+      return { data: await loadTile(parsed.layer, parsed.tile, abort.signal) };
+    });
+  }
 }
 
 const EMPTY: FeatureCollection = { type: 'FeatureCollection', features: [] };
@@ -131,6 +133,10 @@ export default function MapView({ layer, boundaries = [], areas = [], markers = 
     map.on('style.load', () => {
       addOverlays(map);
       setStyleVersion((v) => v + 1);
+    });
+    // Für Tests sichtbar, wie viele Kacheln aus Offline-Paketen kamen.
+    map.on('idle', () => {
+      if (container.current) container.current.dataset.packTiles = String(tileStats.pack);
     });
     mapRef.current = map;
     return () => {

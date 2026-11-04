@@ -5,6 +5,19 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 7
+
+- Offline-Karten je Revier (`src/modules/map/tileStore.ts`): auf der Revierseite Kartentypen (Karte,
+  Luftbild) und Detailstufe wählen; die App schätzt Kachelzahl und Größe und lädt das Gebiet der
+  Grenze und Einrichtungen plus 500 m Rand ab Zoom 10. Jedes Paket liegt in einem eigenen
+  Cache-Storage-Cache `map-pack:<revierId>`, die Angaben dazu in IndexedDB.
+- Die Karte liest jede Kachel zuerst aus den Paketen, dann aus dem Netz (eigene MapLibre-Protokolle
+  `basemap://` und `nrwdop://`). Abbruch speichert den Stand als „unvollständig“; beim Aktualisieren
+  bleiben alte Kacheln erhalten, wenn der Abruf scheitert. Obergrenze 12.000 Kacheln je Paket.
+- Das Profil listet alle Pakete mit Größe und belegtem Speicher; die Jagdseite zeigt, ob die Karte des
+  Reviers offline vorliegt. Beim Abmelden werden alle Pakete gelöscht.
+- e2e: `e2e/offline-maps-local.mjs` ersetzt die Kachelserver durch eine kleine PNG-Antwort.
+
 ## Stand Phase 6
 
 - Alle geladenen Daten (Gruppen, Reviere, Jagden, Stände, Zonen, Teilnehmer, Meldungen) werden pro
@@ -15,7 +28,6 @@ unverändert die Rückfallebene.
   Warteschlange, übersteht Neustarts und wird automatisch gesendet. Sie trägt eine Geräte-ID und den
   Zeitpunkt des Antippens, so entsteht bei Wiederholungen keine Dublette.
 - Der Hinweis oben zeigt, wie viele Meldungen noch warten.
-- Kartenkacheln offline folgen in Phase 7.
 
 ## Stand Phase 5
 

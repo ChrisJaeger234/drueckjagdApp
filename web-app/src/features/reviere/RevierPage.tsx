@@ -14,6 +14,7 @@ import type { GroupPermissions } from '../groups/groupModel';
 import { useMyGroup } from '../groups/useGroups';
 import { MapToolbar, WaypointForm } from './mapControls';
 import { CATEGORY_LABEL, categoryColor, waypointMarkers, type Revier, type Waypoint } from './revierModel';
+import { OfflineMapCard } from '../offlineMaps/OfflineMapCard';
 import { useBoundaries, useRevier, useRevierActions, useWaypoints } from './useReviere';
 
 const errorText = (e: unknown) => (e ? mapError(e).message : null);
@@ -260,6 +261,7 @@ function RevierView({ revier }: { revier: Revier }) {
           importError={importError ?? errorText(actions.saveBoundary.error)}
         />
       )}
+      {mode.kind === 'view' && <OfflineMapCard revierId={revier.id} name={revier.name} area={fit} />}
       <input ref={fileInput} type="file" accept=".kml,.gpx,.geojson,.json,application/vnd.google-earth.kml+xml,application/gpx+xml,application/geo+json,application/json" className="hidden" onChange={onImport} data-testid="boundary-file" />
 
       <Card>
