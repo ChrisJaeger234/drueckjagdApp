@@ -1,4 +1,4 @@
-import 'geo_point.dart';
+import '../../../core/geo/geo_point.dart';
 
 /// Stand einer Jagd (Tabelle `hunt_stands`).
 class HuntStand {

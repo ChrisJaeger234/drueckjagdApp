@@ -1,4 +1,4 @@
-import 'geo_point.dart';
+import '../../../core/geo/geo_point.dart';
 import 'hunt_enums.dart';
 
 /// Eine Jagd (Tabelle `hunts`).

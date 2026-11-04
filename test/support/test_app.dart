@@ -3,11 +3,13 @@ import 'package:drueckjagd_app/core/services/supabase_service.dart';
 import 'package:drueckjagd_app/features/authentication/presentation/auth_providers.dart';
 import 'package:drueckjagd_app/features/groups/presentation/groups_providers.dart';
 import 'package:drueckjagd_app/features/hunting_grounds/presentation/reviere_providers.dart';
+import 'package:drueckjagd_app/features/hunts/presentation/hunts_providers.dart';
 import 'package:drueckjagd_app/features/profile/presentation/profile_providers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import 'fake_hunts.dart';
 import 'fakes.dart';
 
 /// Baut die komplette App mit In-Memory-Repositories (ohne Netzwerk).
@@ -17,12 +19,14 @@ class TestApp {
       profiles = FakeProfileRepository(),
       reviere = FakeReviereRepository() {
     groups = FakeGroupsRepository(currentUserId: 'user-1');
+    hunts = FakeHuntsRepository(currentUserId: 'user-1');
   }
 
   final FakeAuthRepository auth;
   final FakeProfileRepository profiles;
   final FakeReviereRepository reviere;
   late final FakeGroupsRepository groups;
+  late final FakeHuntsRepository hunts;
 
   /// Nie benutzter Platzhalter-Client: alle Repositories sind überschrieben.
   static final _unusedClient = SupabaseClient(
@@ -40,6 +44,7 @@ class TestApp {
       profileRepositoryProvider.overrideWithValue(profiles),
       groupsRepositoryProvider.overrideWithValue(groups),
       reviereRepositoryProvider.overrideWithValue(reviere),
+      huntsRepositoryProvider.overrideWithValue(hunts),
     ],
     child: const DrueckjagdApp(),
   );

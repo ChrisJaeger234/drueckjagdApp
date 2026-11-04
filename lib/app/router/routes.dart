@@ -20,6 +20,12 @@ abstract final class Routes {
   static String revier(String groupId, String revierId) => '/groups/$groupId/reviere/$revierId';
   static String revierEdit(String groupId, String revierId) => '/groups/$groupId/reviere/$revierId/edit';
 
+  static String huntCreate(String groupId) => '/hunts/new?group=$groupId';
+  static String hunt(String huntId) => '/hunts/$huntId';
+  static String huntEdit(String huntId) => '/hunts/$huntId/edit';
+  static String standCreate(String huntId) => '/hunts/$huntId/stands/new';
+  static String standEdit(String huntId, String standId) => '/hunts/$huntId/stands/$standId/edit';
+
   /// Ohne Anmeldung erreichbar.
   static const public = {login, register};
 }

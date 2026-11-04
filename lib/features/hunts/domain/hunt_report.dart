@@ -1,4 +1,4 @@
-import 'geo_point.dart';
+import '../../../core/geo/geo_point.dart';
 import 'hunt_enums.dart';
 
 /// Meldung während einer Jagd (Tabelle `hunt_reports`).

@@ -11,6 +11,9 @@ import '../../../core/widgets/layout.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../../core/widgets/user_avatar.dart';
 import '../../authentication/presentation/auth_providers.dart';
+import '../../hunts/domain/hunt.dart';
+import '../../hunts/presentation/hunts_providers.dart';
+import '../../hunts/presentation/widgets/hunt_tile.dart';
 import '../../hunting_grounds/domain/revier.dart';
 import '../../hunting_grounds/presentation/reviere_providers.dart';
 import '../../hunting_grounds/presentation/widgets/revier_tile.dart';
@@ -104,12 +107,15 @@ class GroupDetailScreen extends ConsumerWidget {
         data: (group) => RefreshIndicator(
           onRefresh: () async {
             invalidateGroupData(ref, groupId: groupId);
-            ref.invalidate(groupReviereProvider(groupId));
+            ref
+              ..invalidate(groupReviereProvider(groupId))
+              ..invalidate(groupHuntsProvider(groupId));
             await ref.read(myGroupProvider(groupId).future);
           },
           child: PageBody(
             children: [
               _GroupHeader(group: group),
+              _HuntsSection(group: group),
               _ReviereSection(group: group),
               _MembersSection(group: group),
               if (group.permissions.canInvite) _InvitesSection(group: group),
@@ -151,6 +157,59 @@ class _GroupHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _HuntsSection extends ConsumerWidget {
+  const _HuntsSection({required this.group});
+
+  final MyGroup group;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final groupId = group.group.id;
+    final hunts = ref.watch(groupHuntsProvider(groupId));
+    final canCreate = group.permissions.canCreateRevier;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionHeader(
+          'Jagden',
+          trailing: canCreate
+              ? TextButton.icon(
+                  onPressed: () => context.push(Routes.huntCreate(groupId)),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('Jagd'),
+                )
+              : null,
+        ),
+        AsyncValueView<List<Hunt>>(
+          value: hunts,
+          onRetry: () => ref.invalidate(groupHuntsProvider(groupId)),
+          data: (list) => list.isEmpty
+              ? Card(
+                  child: EmptyState(
+                    icon: Icons.flag_outlined,
+                    title: 'Noch keine Jagd',
+                    message: canCreate
+                        ? 'Plane die erste Jagd: Termin, Treffpunkt, Freigabe und Stände.'
+                        : 'Owner und Admins legen Jagden an. Du kannst dich dann selbst eintragen.',
+                  ),
+                )
+              : Card(
+                  clipBehavior: Clip.antiAlias,
+                  child: Column(
+                    children: [
+                      for (final (i, h) in sortHuntsForDisplay(list).indexed) ...[
+                        if (i > 0) const Divider(),
+                        HuntTile(hunt: h, showGroup: false),
+                      ],
+                    ],
+                  ),
+                ),
+        ),
+      ],
     );
   }
 }

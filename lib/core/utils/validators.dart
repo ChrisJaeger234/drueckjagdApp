@@ -1,3 +1,5 @@
+import '../geo/geo_point.dart';
+
 /// Eingabevalidierung. Alle Funktionen liefern `null` bei gültiger Eingabe,
 /// sonst eine deutsche Fehlermeldung (kompatibel zu `TextFormField.validator`).
 abstract final class Validators {
@@ -55,6 +57,15 @@ abstract final class Validators {
   static String? groupName(String? value) => _requiredLength(value, 'Gruppennamen', 2, 80);
 
   static String? revierName(String? value) => _requiredLength(value, 'Reviernamen', 2, 120);
+
+  static String? huntTitle(String? value) => _requiredLength(value, 'Titel', 2, 120);
+
+  static String? standLabel(String? value) => _requiredLength(value, 'Standnamen', 1, 60);
+
+  /// Koordinaten „Breite, Länge“, z. B. aus Google Maps kopiert.
+  static String? coordinates(String? value) => GeoPoint.tryParse(value ?? '') == null
+      ? 'Bitte Koordinaten als „Breite, Länge“ eingeben, z. B. 51.16868, 7.24749.'
+      : null;
 
   static String? Function(String?) maxLength(int max) =>
       (value) => (value?.trim().length ?? 0) > max ? 'Höchstens $max Zeichen.' : null;

@@ -1,4 +1,4 @@
-import '../../features/hunts/domain/geo_point.dart';
+import '../geo/geo_point.dart';
 
 /// App-weite Konstanten.
 abstract final class AppConstants {
