@@ -33,6 +33,8 @@ const context = await browser.newContext({ viewport: { width: 390, height: 844 }
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
+// Phase 10: Verstöße gegen die Content-Security-Policy zählen als Fehler.
+page.on('console', (m) => /Content Security Policy/i.test(m.text()) && errors.push(`CSP ${m.text()}`));
 
 await page.goto(URL);
 check(await page.getByRole('heading', { level: 1, name: 'Anmelden' }).isVisible({ timeout: 10000 }).catch(() => false), 'Abgemeldet: Anmeldeseite');
