@@ -11,6 +11,7 @@ in Dateinamensreihenfolge ausgeführt.
 | `20261104000004_group_functions.sql` | RPCs für Gruppen, Einladungen, Rollen, Mitglieder |
 | `20261104000005_storage_avatars.sql` | Privater Storage-Bucket `avatars` mit Policies |
 | `20261104000006_review_hardening.sql` | Härtung nach Review: Sperren gegen Owner-Race-Conditions, robustes Einlösen, automatischer Owner-Nachfolger bei Kontolöschung, Standardwerte `auth.uid()`, FK-Indizes |
+| `20261104000007_rls_security_test_fixes.sql` | Fixes aus dem Sicherheitstest: entfernte Mitglieder können ältere Einladungscodes nicht mehr nutzen (`group_member_removals`), `remove_group_member` verrät keine Mitgliedschaften |
 
 ## Tabellen
 
