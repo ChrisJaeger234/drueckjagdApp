@@ -12,6 +12,8 @@
 
 ## 1. Supabase-Projekt anlegen (einmalig)
 
+Ausführliche Schritt-für-Schritt-Liste zum Abhaken: [SUPABASE_CHECKLIST.md](SUPABASE_CHECKLIST.md).
+
 1. Auf <https://supabase.com/dashboard> ein neues Projekt anlegen
    (Region z. B. Frankfurt `eu-central-1`). Datenbank-Passwort sicher notieren.
 2. Migrationen einspielen:

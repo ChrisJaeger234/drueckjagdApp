@@ -60,7 +60,8 @@ gemeinsamen Gruppe lesbar; bearbeiten darf man nur das eigene Profil.
 
 ## Tests der Berechtigungen
 
-`supabase/tests/database/rls.test.sql` enthält 57 pgTAP-Tests, die mit echten
+`supabase/tests/database/rls.test.sql` enthält 57 pgTAP-Tests (weitere 16 in
+`review_hardening.test.sql`), die mit echten
 Rollen (`authenticated`/`anon`) und JWT-Claims laufen, u. a.:
 
 - Nicht-Mitglieder sehen keine Gruppen, Mitglieder, Profile, Reviere,
