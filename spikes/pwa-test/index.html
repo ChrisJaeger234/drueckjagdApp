@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#2e4a2e" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Jagd-Test" />
+    <link rel="apple-touch-icon" href="apple-touch-icon.png" />
+    <link rel="icon" href="icon-192.png" />
+    <title>Drückjagd PWA-Test</title>
+  </head>
+  <body>
+    <header>
+      <h1>Drückjagd PWA-Test</h1>
+      <p>Phase 0: prüft, was die Web-App auf diesem Gerät kann. Es werden keine Daten an einen Server gesendet.</p>
+    </header>
+
+    <section id="install-hint" class="card hint">
+      <strong>Erst installieren:</strong> In Safari unten auf <em>Teilen</em> tippen, dann <em>Zum Home-Bildschirm</em>.
+      Danach die App über das neue Symbol starten. Push-Nachrichten funktionieren auf dem iPhone nur so.
+    </section>
+
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="map-tools">
+        <button data-layer="karte" class="active">Karte</button>
+        <button data-layer="luftbild">Luftbild</button>
+        <label class="file-btn">KML/GPX laden<input id="file" type="file" accept=".kml,.gpx,application/vnd.google-earth.kml+xml,application/gpx+xml,text/xml,application/xml" /></label>
+      </div>
+    </div>
+
+    <main>
+      <section class="card">
+        <h2>Status</h2>
+        <dl>
+          <dt>Start</dt><dd id="st-mode"></dd>
+          <dt>Netz</dt><dd id="st-net"></dd>
+          <dt>Service Worker</dt><dd id="st-sw"></dd>
+          <dt>Speicher</dt><dd id="st-storage"></dd>
+          <dt>Offline-Paket</dt><dd id="st-pack"></dd>
+        </dl>
+        <button id="persist">Speicher dauerhaft schützen</button>
+      </section>
+
+      <section class="card">
+        <h2>1 · Offline-Karte</h2>
+        <p>Lädt das Revier (oder ein Standardgebiet um den Reviermittelpunkt) auf das Gerät. Danach Flugmodus an, App schließen und neu öffnen.</p>
+        <div class="row">
+          <label><input id="pack-karte" type="checkbox" checked /> Karte</label>
+          <label><input id="pack-luftbild" type="checkbox" checked /> Luftbild</label>
+          <label>bis Zoom
+            <select id="pack-zoom">
+              <option value="16">16</option>
+              <option value="17" selected>17</option>
+              <option value="18">18 (groß)</option>
+            </select>
+          </label>
+        </div>
+        <p class="muted" id="pack-estimate"></p>
+        <div class="row">
+          <button id="pack-load" class="primary">Offline-Paket laden</button>
+          <button id="pack-clear">Paket löschen</button>
+        </div>
+        <p id="pack-progress"></p>
+      </section>
+
+      <section class="card">
+        <h2>2 · GPS</h2>
+        <p>GPS starten, eigene Position prüfen. Dann den Bildschirm 2 Minuten sperren und wieder öffnen: Die App zeigt, ob in der Zeit Positionen ankamen.</p>
+        <button id="gps-toggle" class="primary">GPS starten</button>
+        <p id="gps-status"></p>
+        <p class="muted" id="gps-stats"></p>
+      </section>
+
+      <section class="card">
+        <h2>3 · Display wachhalten</h2>
+        <p>Einschalten, Handy 5 Minuten liegen lassen. Bleibt der Bildschirm an?</p>
+        <button id="wake-toggle" class="primary">Display wachhalten</button>
+        <p id="wake-status"></p>
+      </section>
+
+      <section class="card">
+        <h2>4 · Benachrichtigungen</h2>
+        <div class="row">
+          <button id="notify-local">Lokale Testbenachrichtigung</button>
+          <button id="push-subscribe">Push abonnieren</button>
+        </div>
+        <p id="notify-status"></p>
+        <p id="push-status"></p>
+        <textarea id="push-json" rows="4" readonly hidden></textarea>
+      </section>
+
+      <section class="card">
+        <h2>5 · Meldung ohne Netz</h2>
+        <p>Im Flugmodus eine Testmeldung speichern, App schließen, neu öffnen: Ist sie noch da?</p>
+        <button id="report-add" class="primary">Testmeldung „Stück erlegt“ speichern</button>
+        <p id="report-status"></p>
+      </section>
+
+      <section class="card">
+        <h2>Ergebnis</h2>
+        <button id="report-build" class="primary">Ergebnis kopieren</button>
+        <p id="report-copy"></p>
+        <textarea id="report-text" rows="10" readonly hidden></textarea>
+      </section>
+
+      <section class="card">
+        <h2>Protokoll</h2>
+        <ul id="log"></ul>
+        <button id="log-clear">Protokoll leeren</button>
+      </section>
+    </main>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
