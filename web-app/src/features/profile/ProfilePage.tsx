@@ -6,6 +6,7 @@ import { mapError } from '../../lib/errors';
 import * as V from '../../lib/validators';
 import { useAuth, useUser } from '../auth/AuthContext';
 import { useSubmit } from '../auth/useSubmit';
+import { OfflinePacksCard } from '../offlineMaps/OfflinePacksCard';
 import { Avatar } from './Avatar';
 import { isProfileComplete, profileLabel, type Profile } from './profileService';
 import { resizeAvatar } from './resizeImage';
@@ -26,6 +27,7 @@ export function ProfilePage() {
       ) : (
         <ProfileContent profile={profile} />
       )}
+      <OfflinePacksCard />
       <SignOutCard />
     </Page>
   );
