@@ -1,6 +1,10 @@
 import { AppError } from '../lib/errors';
 import type { AppUser, AuthEvent, AuthService, SignUpResult } from '../features/auth/authService';
 import type { Profile, ProfileService } from '../features/profile/profileService';
+import { inviteStatus, type GroupInvite, type GroupMember, type GroupRole, type HuntingGroup, type MyGroup } from '../features/groups/groupModel';
+import type { GroupsService } from '../features/groups/groupsService';
+import type { Boundary, Revier, RevierBoundary, Waypoint, WaypointInput } from '../features/reviere/revierModel';
+import type { ReviereService } from '../features/reviere/reviereService';
 
 /** In-Memory-Auth für Tests (wie FakeAuthRepository in der Flutter-App). */
 export class FakeAuth implements AuthService {
@@ -98,5 +102,194 @@ export class FakeProfiles implements ProfileService {
   }
   async avatarUrl() {
     return null;
+  }
+}
+
+/** In-Memory-Gruppen mit denselben Regeln wie die SQL-Funktionen (vereinfacht). */
+export class FakeGroups implements GroupsService {
+  groups = new Map<string, HuntingGroup>();
+  memberList: GroupMember[] = [];
+  inviteList: (GroupInvite & { code: string })[] = [];
+  private seq = 0;
+  constructor(private auth: FakeAuth, private profiles: FakeProfiles) {}
+
+  private uid() {
+    if (!this.auth.user) throw new AppError('Bitte melde dich an.', 'unauthenticated');
+    return this.auth.user.id;
+  }
+  private roleOf(groupId: string, userId = this.uid()) {
+    return this.memberList.find((m) => m.groupId === groupId && m.userId === userId)?.role ?? null;
+  }
+  private requireRole(groupId: string, ...roles: GroupRole[]) {
+    const role = this.roleOf(groupId);
+    if (!role || !roles.includes(role)) throw new AppError('Dafür fehlen dir die Berechtigungen in dieser Gruppe.', 'forbidden');
+    return role;
+  }
+  private canManage(groupId: string) {
+    const g = this.groups.get(groupId);
+    return this.requireRole(groupId, ...(g?.adminsCanManageMembers ? (['owner', 'admin'] as const) : (['owner'] as const)));
+  }
+
+  seedGroup(name: string, members: [string, GroupRole][], data: Partial<HuntingGroup> = {}) {
+    const id = `g${++this.seq}`;
+    this.groups.set(id, { id, name, description: '', createdBy: members[0]?.[0] ?? null, adminsCanManageMembers: true, createdAt: '', updatedAt: '', ...data });
+    members.forEach(([userId, role]) => this.addMember(id, userId, role));
+    return id;
+  }
+  private addMember(groupId: string, userId: string, role: GroupRole) {
+    this.memberList.push({ id: `m${++this.seq}`, groupId, userId, role, joinedAt: '', profile: this.profiles.profiles.get(userId) ?? null });
+  }
+
+  async myGroups(userId: string): Promise<MyGroup[]> {
+    return this.memberList.filter((m) => m.userId === userId).map((m) => ({ group: this.groups.get(m.groupId)!, role: m.role }));
+  }
+  async myGroup(userId: string, groupId: string) {
+    const found = (await this.myGroups(userId)).find((g) => g.group.id === groupId);
+    if (!found) throw new AppError('Diese Gruppe existiert nicht oder du bist kein Mitglied.', 'notFound');
+    return found;
+  }
+  async createGroup({ name, description }: { name: string; description: string }) {
+    const id = this.seedGroup(name, [[this.uid(), 'owner']], { description });
+    return this.groups.get(id)!;
+  }
+  async updateGroup(groupId: string, input: { name: string; description: string; adminsCanManageMembers: boolean }) {
+    this.requireRole(groupId, 'owner');
+    this.groups.set(groupId, { ...this.groups.get(groupId)!, ...input });
+  }
+  async deleteGroup(groupId: string) {
+    this.requireRole(groupId, 'owner');
+    this.groups.delete(groupId);
+    this.memberList = this.memberList.filter((m) => m.groupId !== groupId);
+  }
+  async members(groupId: string) {
+    return this.memberList.filter((m) => m.groupId === groupId);
+  }
+  async setMemberRole(groupId: string, userId: string, role: GroupRole) {
+    this.requireRole(groupId, 'owner');
+    const m = this.memberList.find((x) => x.groupId === groupId && x.userId === userId);
+    if (!m) throw new AppError('Dieses Mitglied wurde nicht gefunden.', 'notFound');
+    m.role = role;
+  }
+  async removeMember(groupId: string, userId: string) {
+    this.canManage(groupId);
+    this.memberList = this.memberList.filter((m) => !(m.groupId === groupId && m.userId === userId));
+  }
+  async leaveGroup(groupId: string) {
+    const uid = this.uid();
+    const owners = this.memberList.filter((m) => m.groupId === groupId && m.role === 'owner');
+    if (this.roleOf(groupId) === 'owner' && owners.length === 1) {
+      throw new AppError('Du bist der einzige Owner. Ernenne zuerst ein anderes Mitglied zum Owner oder lösche die Gruppe.', 'conflict');
+    }
+    this.memberList = this.memberList.filter((m) => !(m.groupId === groupId && m.userId === uid));
+  }
+  async createInvite(groupId: string, { validHours, maxUses }: { validHours: number | null; maxUses: number | null }) {
+    this.canManage(groupId);
+    const code = `ABCD-EFGH-${String(++this.seq).padStart(4, 'K')}`;
+    const expiresAt = validHours ? new Date(Date.now() + validHours * 3600_000).toISOString() : null;
+    const id = `i${this.seq}`;
+    this.inviteList.unshift({ id, groupId, createdBy: this.uid(), createdAt: new Date().toISOString(), expiresAt, maxUses, useCount: 0, revokedAt: null, code });
+    return { inviteId: id, code, expiresAt };
+  }
+  async invites(groupId: string) {
+    return this.inviteList.filter((i) => i.groupId === groupId);
+  }
+  async revokeInvite(inviteId: string) {
+    const inv = this.inviteList.find((i) => i.id === inviteId);
+    if (inv) inv.revokedAt = new Date().toISOString();
+  }
+  async redeemInvite(code: string) {
+    const inv = this.inviteList.find((i) => i.code === code && inviteStatus(i) === 'active');
+    if (!inv) throw new AppError('Dieser Einladungscode ist ungültig, abgelaufen oder wurde bereits verwendet.', 'validation');
+    inv.useCount++;
+    if (!this.roleOf(inv.groupId)) this.addMember(inv.groupId, this.uid(), 'member');
+    return inv.groupId;
+  }
+}
+
+/** In-Memory-Reviere; Rechte wie RLS: Owner/Admin schreiben, Owner löscht Reviere. */
+export class FakeReviere implements ReviereService {
+  reviere: Revier[] = [];
+  boundaryList: RevierBoundary[] = [];
+  waypointList: Waypoint[] = [];
+  private seq = 0;
+  constructor(private auth: FakeAuth, private groups: FakeGroups) {}
+
+  private role(groupId: string) {
+    return this.groups.memberList.find((m) => m.groupId === groupId && m.userId === this.auth.user?.id)?.role ?? null;
+  }
+  private requireEditor(revierId: string) {
+    const r = this.reviere.find((x) => x.id === revierId);
+    const role = r ? this.role(r.groupId) : null;
+    if (role !== 'owner' && role !== 'admin') throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    return r!;
+  }
+  private visible() {
+    return this.reviere.filter((r) => this.role(r.groupId));
+  }
+
+  seedRevier(groupId: string, name: string) {
+    const r: Revier = { id: `r${++this.seq}`, name, description: '', groupId, groupName: this.groups.groups.get(groupId)?.name ?? null, createdBy: null, createdAt: '', updatedAt: '' };
+    this.reviere.push(r);
+    return r.id;
+  }
+  seedWaypoint(revierId: string, data: Partial<Waypoint> = {}) {
+    const w: Waypoint = { id: `w${++this.seq}`, revierId, createdBy: null, name: 'Bock 1', description: '', category: 'drueckjagdbock', lat: 51.17, lng: 7.25, ...data };
+    this.waypointList.push(w);
+    return w.id;
+  }
+
+  async all() {
+    return this.visible();
+  }
+  async forGroup(groupId: string) {
+    return this.visible().filter((r) => r.groupId === groupId);
+  }
+  async get(revierId: string) {
+    const r = this.visible().find((x) => x.id === revierId);
+    if (!r) throw new AppError('Dieses Revier existiert nicht oder du hast keinen Zugriff.', 'notFound');
+    return r;
+  }
+  async create({ groupId, name, description }: { groupId: string; name: string; description: string }) {
+    const role = this.role(groupId);
+    if (role !== 'owner' && role !== 'admin') throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    const id = this.seedRevier(groupId, name.trim());
+    const r = this.reviere.find((x) => x.id === id)!;
+    r.description = description;
+    return r;
+  }
+  async update(revierId: string, input: { name: string; description: string }) {
+    Object.assign(this.requireEditor(revierId), input);
+  }
+  async remove(revierId: string) {
+    const r = this.requireEditor(revierId);
+    if (this.role(r.groupId) !== 'owner') throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    this.reviere = this.reviere.filter((x) => x.id !== revierId);
+  }
+  async boundaries(revierIds: string[]) {
+    return this.boundaryList.filter((b) => revierIds.includes(b.revierId));
+  }
+  async saveBoundary(revierId: string, geometry: Boundary) {
+    this.requireEditor(revierId);
+    this.boundaryList = [...this.boundaryList.filter((b) => b.revierId !== revierId), { id: `b${++this.seq}`, revierId, geometry }];
+  }
+  async removeBoundary(revierId: string) {
+    this.requireEditor(revierId);
+    this.boundaryList = this.boundaryList.filter((b) => b.revierId !== revierId);
+  }
+  async waypoints(revierIds: string[]) {
+    return this.waypointList.filter((w) => revierIds.includes(w.revierId));
+  }
+  async createWaypoint(revierId: string, input: WaypointInput) {
+    this.requireEditor(revierId);
+    const id = this.seedWaypoint(revierId, { ...input, createdBy: this.auth.user!.id });
+    return this.waypointList.find((w) => w.id === id)!;
+  }
+  async updateWaypoint(waypointId: string, input: WaypointInput) {
+    const w = this.waypointList.find((x) => x.id === waypointId);
+    if (!w) throw new AppError('Der Eintrag wurde nicht gefunden.', 'notFound');
+    Object.assign(w, input);
+  }
+  async removeWaypoint(waypointId: string) {
+    this.waypointList = this.waypointList.filter((w) => w.id !== waypointId);
   }
 }

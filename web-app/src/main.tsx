@@ -5,7 +5,9 @@ import { App } from './app/App';
 import { createAppRouter } from './app/router';
 import { SetupPage } from './app/SetupPage';
 import { createSupabaseAuthService } from './features/auth/authService';
+import { createSupabaseGroupsService } from './features/groups/groupsService';
 import { createSupabaseProfileService } from './features/profile/profileService';
+import { createSupabaseReviereService } from './features/reviere/reviereService';
 import { supabase } from './lib/supabase';
 import './styles/index.css';
 
@@ -19,7 +21,12 @@ const root = createRoot(document.getElementById('root')!);
 if (!supabase) {
   root.render(<SetupPage />);
 } else {
-  const services = { auth: createSupabaseAuthService(supabase, appUrl), profiles: createSupabaseProfileService(supabase) };
+  const services = {
+    auth: createSupabaseAuthService(supabase, appUrl),
+    profiles: createSupabaseProfileService(supabase),
+    groups: createSupabaseGroupsService(supabase),
+    reviere: createSupabaseReviereService(supabase),
+  };
   const router = createAppRouter({ basepath: base.replace(/\/$/, '') || '/' });
   root.render(
     <StrictMode>

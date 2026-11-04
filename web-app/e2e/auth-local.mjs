@@ -44,7 +44,7 @@ await page.getByLabel('Passwort bestätigen').fill(password);
 await page.getByRole('button', { name: 'Registrieren' }).click();
 await page.getByRole('heading', { level: 1, name: 'Profil' }).waitFor({ timeout: 10000 });
 check(true, `Registriert und angemeldet als ${email}`);
-check(await page.getByText('Profil vervollständigen').isVisible(), 'Neues Profil ist unvollständig (Trigger handle_new_user hat es angelegt)');
+check(await page.getByText('Profil vervollständigen').waitFor({ timeout: 10000 }).then(() => true, () => false), 'Neues Profil ist unvollständig (Trigger handle_new_user hat es angelegt)');
 
 await page.getByLabel('Anzeigename').fill('Max Testjäger');
 await page.getByLabel('Benutzername').fill(user);

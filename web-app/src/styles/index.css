@@ -59,3 +59,50 @@ select,
 textarea {
   font-size: max(16px, 1em);
 }
+
+/* ---------------------------------------------------------------- Karte */
+.map-view {
+  position: relative;
+  width: 100%;
+  overflow: hidden;
+  border-radius: 1rem;
+  border: 1px solid var(--color-line);
+  background: #e8e4d8;
+}
+.map-waypoint {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  cursor: pointer;
+}
+.map-waypoint-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 9999px;
+  background: var(--wp-color);
+  border: 2px solid #fff;
+  box-shadow: 0 1px 3px rgb(0 0 0 / 0.4);
+}
+.map-waypoint-label {
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  padding: 1px 6px;
+  border-radius: 6px;
+  background: rgb(255 255 255 / 0.9);
+  color: #1d2a1c;
+  font-size: 12px;
+  font-weight: 600;
+}
+.map-position {
+  width: 18px;
+  height: 18px;
+  border-radius: 9999px;
+  background: #1a73e8;
+  border: 3px solid #fff;
+  box-shadow: 0 0 0 6px rgb(26 115 232 / 0.25);
+}

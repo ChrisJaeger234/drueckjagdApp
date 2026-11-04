@@ -4,10 +4,15 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { NewPasswordPage } from '../features/auth/NewPasswordPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { ChatPage } from '../features/chat/ChatPage';
+import { CreateGroupPage } from '../features/groups/CreateGroupPage';
+import { GroupDetailPage } from '../features/groups/GroupDetailPage';
 import { GroupsPage } from '../features/groups/GroupsPage';
+import { JoinGroupPage } from '../features/groups/JoinGroupPage';
 import { MapPage } from '../features/map/MapPage';
 import { OverviewPage } from '../features/overview/OverviewPage';
 import { ProfilePage } from '../features/profile/ProfilePage';
+import { CreateRevierPage, EditRevierPage } from '../features/reviere/RevierFormPage';
+import { RevierPage } from '../features/reviere/RevierPage';
 import { AppShell } from './AppShell';
 import { AuthGate } from './AuthGate';
 import { NotFound } from './NotFound';
@@ -25,6 +30,12 @@ export const routeTree = rootRoute.addChildren([
     inShell('/', OverviewPage),
     inShell('/karte', MapPage),
     inShell('/gruppe', GroupsPage),
+    inShell('/gruppe/neu', CreateGroupPage),
+    inShell('/gruppe/beitreten', JoinGroupPage),
+    inShell('/gruppe/$groupId', GroupDetailPage),
+    inShell('/gruppe/$groupId/revier-neu', CreateRevierPage),
+    inShell('/revier/$revierId', RevierPage),
+    inShell('/revier/$revierId/bearbeiten', EditRevierPage),
     inShell('/chat', ChatPage),
     inShell('/profil', ProfilePage),
   ]),

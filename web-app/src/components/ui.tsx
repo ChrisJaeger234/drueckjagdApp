@@ -1,4 +1,4 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 
 /** Kopfzeile und Inhalt einer Seite, mit Abstand zur sicheren Zone auf dem iPhone. */
@@ -18,13 +18,14 @@ export function Card({ children, className = '' }: { children: ReactNode; classN
   return <section className={`rounded-2xl border border-line bg-surface p-4 ${className}`}>{children}</section>;
 }
 
-type ButtonVariant = 'primary' | 'secondary';
+type ButtonVariant = 'primary' | 'secondary' | 'danger';
 
 export function Button({ variant = 'primary', className = '', ...props }: ButtonHTMLAttributes<HTMLButtonElement> & { variant?: ButtonVariant }) {
-  const styles =
-    variant === 'primary'
-      ? 'bg-primary text-on-primary border-primary'
-      : 'bg-surface text-text border-line';
+  const styles = {
+    primary: 'bg-primary text-on-primary border-primary',
+    secondary: 'bg-surface text-text border-line',
+    danger: 'bg-danger text-white border-danger',
+  }[variant];
   return (
     <button
       type="button"
@@ -44,4 +45,59 @@ export function ComingSoon({ icon: Icon, title, text, phase }: { icon: LucideIco
       <span className="mt-1 rounded-full bg-sand-light px-3 py-1 text-xs font-medium text-bark">{phase}</span>
     </Card>
   );
+}
+
+/** Zweistufige Bestätigung für Aktionen, die sich nicht rückgängig machen lassen. */
+export function ConfirmButton({
+  label,
+  confirmText,
+  confirmLabel = 'Ja, bestätigen',
+  onConfirm,
+  disabled,
+  danger = true,
+}: {
+  label: ReactNode;
+  confirmText: string;
+  confirmLabel?: string;
+  onConfirm: () => void;
+  disabled?: boolean;
+  danger?: boolean;
+}) {
+  const [asking, setAsking] = useState(false);
+  if (!asking) {
+    return (
+      <Button variant="secondary" disabled={disabled} onClick={() => setAsking(true)} className={danger ? 'text-danger!' : ''}>
+        {label}
+      </Button>
+    );
+  }
+  return (
+    <div role="alertdialog" aria-label={confirmText} className="grid gap-2 rounded-xl border border-danger/50 p-3">
+      <p className="text-sm">{confirmText}</p>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant={danger ? 'danger' : 'primary'}
+          disabled={disabled}
+          onClick={() => {
+            setAsking(false);
+            onConfirm();
+          }}
+        >
+          {confirmLabel}
+        </Button>
+        <Button variant="secondary" onClick={() => setAsking(false)}>
+          Abbrechen
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function Badge({ children, tone = 'neutral' }: { children: ReactNode; tone?: 'neutral' | 'primary' | 'signal' }) {
+  const styles = {
+    neutral: 'bg-sand-light text-bark',
+    primary: 'bg-forest text-white dark:bg-moss-light dark:text-forest-deep',
+    signal: 'bg-signal/15 text-signal',
+  }[tone];
+  return <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${styles}`}>{children}</span>;
 }
