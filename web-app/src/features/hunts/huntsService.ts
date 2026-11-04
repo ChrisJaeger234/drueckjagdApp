@@ -4,12 +4,14 @@ import type { Boundary } from '../reviere/revierModel';
 import {
   HUNT_COLUMNS,
   PARTICIPANT_COLUMNS,
+  POSITION_COLUMNS,
   REPORT_COLUMNS,
   STAND_COLUMNS,
   ZONE_COLUMNS,
   huntDraftToRow,
   huntFromRow,
   participantFromRow,
+  positionFromRow,
   reportFromRow,
   sortHunts,
   sortParticipants,
@@ -21,8 +23,10 @@ import {
   type HuntRole,
   type HuntRow,
   type HuntStatus,
+  type LivePosition,
   type Participant,
   type ParticipantRow,
+  type PositionRow,
   type Report,
   type ReportInput,
   type ReportRow,
@@ -64,6 +68,11 @@ export interface HuntsService {
   createReport(huntId: string, input: ReportInput): Promise<void>;
   setReportResolved(reportId: string, resolved: boolean): Promise<void>;
   removeReport(reportId: string): Promise<void>;
+
+  /** Live-Standorte der laufenden Jagd, soweit RLS sie zeigt (Migration 0011). */
+  positions(huntId: string): Promise<LivePosition[]>;
+  sharePosition(huntId: string, pos: { lat: number; lng: number; accuracy: number | null }): Promise<void>;
+  stopSharing(huntId: string): Promise<void>;
 }
 
 const FORBIDDEN = () => new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
@@ -164,5 +173,13 @@ export function createSupabaseHuntsService(client: SupabaseClient): HuntsService
       }),
     setReportResolved: (reportId, resolved) => guard(() => updateOne('hunt_reports', reportId, { resolved_at: resolved ? new Date().toISOString() : null })),
     removeReport: (reportId) => guard(() => deleteOne('hunt_reports', reportId)),
+
+    positions: (huntId) =>
+      guard(async () => unwrap(await client.from('hunt_positions').select(POSITION_COLUMNS).eq('hunt_id', huntId).returns<PositionRow[]>()).map(positionFromRow)),
+    sharePosition: (huntId, p) =>
+      guard(async () =>
+        check(await client.rpc('share_hunt_position', { p_hunt_id: huntId, p_latitude: p.lat, p_longitude: p.lng, p_accuracy: p.accuracy ?? undefined })),
+      ),
+    stopSharing: (huntId) => guard(async () => check(await client.rpc('stop_hunt_position', { p_hunt_id: huntId }))),
   };
 }

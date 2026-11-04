@@ -1,5 +1,6 @@
 import { Link, Outlet } from '@tanstack/react-router';
 import { LayoutDashboard, Map, MessagesSquare, User, Users, type LucideIcon } from 'lucide-react';
+import { LiveSharing } from '../features/live/LiveSharing';
 import { OfflineBanner } from './OfflineBanner';
 
 /** Hauptbereiche wie in der Flutter-App (lib/app/router/app_shell.dart). */
@@ -43,6 +44,7 @@ export function AppShell() {
       </nav>
       <main className="flex-1 pb-[calc(env(safe-area-inset-bottom)+72px)] md:pb-0">
         <OfflineBanner />
+        <LiveSharing />
         <Outlet />
       </main>
     </div>

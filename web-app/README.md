@@ -5,6 +5,22 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 8
+
+- Live-Standorte während einer laufenden Jagd (Migration 0011, nur additiv: Tabelle
+  `hunt_positions` mit RLS, RPCs `share_hunt_position`/`stop_hunt_position`).
+- Teilen dürfen Treiber, Hundeführer, Bergung, Jagdleiter und Ansteller; sehen dürfen dieselben
+  Rollen sowie Owner/Admins der Gruppe. Schützen teilen nicht und sehen nur die eigene Position.
+- Je Person und Jagd wird nur die letzte Position gespeichert (Server-Zeitstempel, kein Verlauf). Sie
+  wird gelöscht, wenn die Jagd endet, die Rolle wechselt, man sich austrägt oder „Teilen beenden“ tippt.
+- Geteilt wird nur, solange die App offen und der Bildschirm an ist (Browser-Grenze); „Bildschirm
+  anlassen“ nutzt die Wake Lock API. Das Teilen läuft beim Seitenwechsel weiter, ein Hinweis oben zeigt
+  es an. Gesendet wird bei Bewegung ab 20 m höchstens alle 10 s, sonst alle 30 s.
+- Die Jagdseite zeigt die geteilten Positionen als Liste und farbige Marker (nach Rolle, grau ab
+  2 Minuten Alter) und lädt sie alle 10 s neu.
+- Tests: `supabase/tests/database/hunt_positions.test.sql` (pgTAP, läuft jetzt auch in CI) und
+  `e2e/live-local.mjs`.
+
 ## Stand Phase 7
 
 - Offline-Karten je Revier (`src/modules/map/tileStore.ts`): auf der Revierseite Kartentypen (Karte,

@@ -2,6 +2,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../features/auth/AuthContext';
 import { clearPersistence, registerOfflineMutations, startPersistence } from '../lib/offline';
+import { liveStore } from '../features/live/liveStore';
 import { deleteAllPacks } from '../modules/map/tileStore';
 import { useServices } from './services';
 
@@ -35,6 +36,7 @@ export function OfflineSync({ persist }: { persist: boolean }) {
       void clearPersistence(client);
       // Offline-Karten enthalten Reviergebiete und gehören zum Benutzer.
       void deleteAllPacks();
+      liveStore.stop();
     }
   }, [status, client]);
 

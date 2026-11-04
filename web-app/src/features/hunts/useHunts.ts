@@ -9,7 +9,7 @@ export const huntKeys = {
   all: () => ['hunts', 'all'] as const,
   group: (groupId: string) => ['hunts', 'group', groupId] as const,
   one: (huntId: string) => ['hunts', 'one', huntId] as const,
-  part: (huntId: string, part: 'participants' | 'stands' | 'zones' | 'reports') => ['hunts', 'one', huntId, part] as const,
+  part: (huntId: string, part: 'participants' | 'stands' | 'zones' | 'reports' | 'positions') => ['hunts', 'one', huntId, part] as const,
 };
 
 export function useAllHunts() {
@@ -71,3 +71,15 @@ export function useHuntActions(huntId: string) {
 }
 
 export type HuntActions = ReturnType<typeof useHuntActions>;
+
+/** Live-Standorte der laufenden Jagd, alle 10 s neu (nur wer sie sehen darf). */
+export function useHuntPositions(huntId: string, enabled: boolean) {
+  const { hunts } = useServices();
+  return useQuery({
+    queryKey: huntKeys.part(huntId, 'positions'),
+    queryFn: () => hunts.positions(huntId),
+    enabled,
+    refetchInterval: enabled ? 10_000 : false,
+    staleTime: 5_000,
+  });
+}

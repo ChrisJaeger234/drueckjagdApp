@@ -389,6 +389,64 @@ export function huntPermissions(userId: string, groupRole: GroupRole | null, me:
 
 export type HuntPermissions = ReturnType<typeof huntPermissions>;
 
+// ------------------------------------------------------------ Live-Standorte (Phase 8)
+
+/** Rollen, die während der laufenden Jagd ihren Standort teilen und die anderen sehen (Migration 0011). */
+export const POSITION_SHARING_ROLES: readonly HuntRole[] = ['treiber', 'hundefuehrer', 'bergung', 'jagdleiter', 'ansteller'];
+export const sharesPosition = (r: HuntRole) => POSITION_SHARING_ROLES.includes(r);
+
+export function livePermissions(hunt: Hunt, groupRole: GroupRole | null, me: Participant | null) {
+  const running = hunt.status === 'laufend';
+  const sharingRole = me != null && sharesPosition(me.role);
+  return {
+    canShare: running && sharingRole,
+    canView: running && (sharingRole || groupRole === 'owner' || groupRole === 'admin'),
+  };
+}
+
+export interface LivePosition {
+  userId: string;
+  lat: number;
+  lng: number;
+  accuracy: number | null;
+  updatedAt: string;
+}
+
+export const POSITION_COLUMNS = 'user_id, latitude, longitude, accuracy, updated_at';
+
+export interface PositionRow {
+  user_id: string;
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
+  updated_at: string;
+}
+
+export const positionFromRow = (r: PositionRow): LivePosition => ({ userId: r.user_id, lat: r.latitude, lng: r.longitude, accuracy: r.accuracy, updatedAt: r.updated_at });
+
+/** Farben der Live-Marker je Rolle. */
+export function roleColor(r: HuntRole): string {
+  switch (r) {
+    case 'treiber':
+      return '#e8710a';
+    case 'hundefuehrer':
+      return '#8e24aa';
+    case 'bergung':
+      return '#00838f';
+    default:
+      return '#c62828';
+  }
+}
+
+/** Alter einer Position in Worten, z. B. „vor 2 Min.“. */
+export function positionAge(updatedAt: string, now = Date.now()): { text: string; stale: boolean } {
+  const seconds = Math.max(0, Math.round((now - new Date(updatedAt).getTime()) / 1000));
+  const stale = seconds > 120;
+  if (seconds < 60) return { text: 'gerade eben', stale };
+  const minutes = Math.round(seconds / 60);
+  return { text: minutes < 60 ? `vor ${minutes} Min.` : `vor ${Math.round(minutes / 60)} Std.`, stale };
+}
+
 /** Neue Meldung mit Geräte-ID und aktuellem Zeitpunkt. */
 export function newReport(fields: Omit<ReportInput, 'id' | 'occurredAt'>): ReportInput {
   return { id: crypto.randomUUID(), occurredAt: new Date().toISOString(), ...fields };
