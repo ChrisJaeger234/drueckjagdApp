@@ -55,7 +55,8 @@ jobs:
           cache-dependency-path: web-app/package-lock.json
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          # Feste Version: „latest“ fragt die GitHub-API ab und scheitert gelegentlich am Rate-Limit.
+          version: 2.122.1
       - name: Lokalen Supabase-Stack starten
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
       - name: Datenbanktests (pgTAP, RLS-Regeln)
