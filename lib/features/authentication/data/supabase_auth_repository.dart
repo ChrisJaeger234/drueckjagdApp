@@ -22,10 +22,15 @@ class SupabaseAuthRepository implements AuthRepository {
   AppUser? get currentUser => _map(_auth.currentUser);
 
   @override
-  Stream<AppUser?> authStateChanges() async* {
-    yield currentUser;
-    yield* _auth.onAuthStateChange.map((state) => _map(state.session?.user)).distinct();
-  }
+  Stream<AppUser?> authStateChanges() => Stream<AppUser?>.multi((listener) {
+        // Sofort den aktuellen Stand liefern und synchron abonnieren, damit
+        // kein Ereignis zwischen Start und Abonnement verloren geht.
+        listener.add(currentUser);
+        final sub = _auth.onAuthStateChange
+            .map((state) => _map(state.session?.user))
+            .listen(listener.add, onError: listener.addError);
+        listener.onCancel = sub.cancel;
+      }).distinct();
 
   @override
   Future<SignUpResult> signUp({required String email, required String password}) => guard(() async {
