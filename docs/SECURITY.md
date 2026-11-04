@@ -41,6 +41,28 @@
 Profile sind nur für den Benutzer selbst und für Benutzer mit mindestens einer
 gemeinsamen Gruppe lesbar; bearbeiten darf man nur das eigene Profil.
 
+## Jagden (Phase 2, Migration 0010)
+
+Jagdrollen gelten nur innerhalb einer Jagd. „Jagdleitung“ heißt: Owner oder
+Admin der Gruppe **oder** Teilnehmer mit Rolle `jagdleiter`/`ansteller`
+(`private.can_manage_hunt`). Die vollständige Matrix steht in
+[PHASE_2.md](PHASE_2.md#berechtigungen).
+
+- Lesen: alle Gruppenmitglieder, Außenstehende sehen nichts.
+- Jagd anlegen und löschen: Owner/Admin. Bearbeiten: Jagdleitung.
+- Selbsteintragung: jedes Gruppenmitglied, wenn `self_join` an ist und die
+  Jagd geplant oder laufend ist.
+- Der Trigger `private.guard_hunt_participant` erzwingt zusätzlich:
+  Außenstehende bekommen immer `not_authorized` (unabhängig davon, ob die Jagd
+  existiert); Teilnehmer müssen Gruppenmitglieder sein; ohne Jagdleitung kann
+  man nur sich selbst eintragen/ändern, keine Leitungsrolle wählen und sich
+  keinen Stand und keine Zone geben; Ansteller können keine Jagdleiter ernennen.
+- Stände/Zonen/Teilnehmer/Meldungen können über zusammengesetzte
+  Fremdschlüssel nur auf Objekte **derselben** Jagd zeigen; ein Stand nur auf
+  Einrichtungen derselben Gruppe.
+- Spaltenrechte verhindern das Umhängen von `group_id`/`hunt_id`, das Fälschen
+  von `reporter_id`/`resolved_by` und das direkte Schreiben von `geom`.
+
 ## Einladungscodes
 
 - Erzeugung serverseitig mit `gen_random_bytes(12)`, 12 Zeichen
@@ -64,7 +86,8 @@ gemeinsamen Gruppe lesbar; bearbeiten darf man nur das eigene Profil.
 ## Tests der Berechtigungen
 
 `supabase/tests/database/rls.test.sql` enthält 57 pgTAP-Tests (weitere 16 in
-`review_hardening.test.sql`), die mit echten
+`review_hardening.test.sql`, 12 in `rls_security_test_fixes.test.sql` und 57 in
+`hunts.test.sql` für Phase 2), die mit echten
 Rollen (`authenticated`/`anon`) und JWT-Claims laufen, u. a.:
 
 - Nicht-Mitglieder sehen keine Gruppen, Mitglieder, Profile, Reviere,
@@ -77,6 +100,10 @@ Rollen (`authenticated`/`anon`) und JWT-Claims laufen, u. a.:
 - Abgelaufene, widerrufene und aufgebrauchte Codes werden abgelehnt;
   Code-Hashes und Fehlversuche sind nicht lesbar; die Drosselung greift.
 - Standorte anderer sind auch für Owner nicht lesbar.
+- Jagden: Mitglieder können keine Jagd anlegen, sich nicht zum Jagdleiter
+  machen und sich keinen Stand zuteilen; Außenstehende sehen, melden und
+  betreten nichts; Stände aus anderen Jagden und Einrichtungen fremder Gruppen
+  werden abgelehnt; Melder und Erledigt-Vermerk sind fälschungssicher.
 - `anon` hat keinen Zugriff.
 
 Zusätzlich prüfen die Integrationstests (`test/integration/`) dieselben Regeln

@@ -50,6 +50,36 @@ void main() {
       );
       expect(e.message, contains('Benutzername'));
     });
+    test('Fehlerschlüssel aus Phase 2', () {
+      expect(
+        ErrorMapper.map(const PostgrestException(message: 'invalid_boundary', code: '22023')).message,
+        contains('Fläche ist ungültig'),
+      );
+      expect(
+        ErrorMapper.map(const PostgrestException(message: 'waypoint_not_in_group', code: '23514')).kind,
+        AppErrorKind.validation,
+      );
+      final dup = ErrorMapper.map(
+        const PostgrestException(
+          message: 'duplicate key value violates unique constraint "hunt_stands_label_key"',
+          code: '23505',
+        ),
+      );
+      expect(dup.message, contains('bereits einen Stand'));
+    });
+    test('roher JSON-Fehler aus maybeSingle() wird entpackt', () {
+      final e = ErrorMapper.map(
+        const PostgrestException(
+          message: '{"code":"42501","details":null,"hint":null,"message":"not_authorized"}',
+          code: '403',
+          details: 'Forbidden',
+        ),
+      );
+      expect(e.kind, AppErrorKind.forbidden);
+      expect(e.message, contains('Berechtigungen'));
+      final unknown = ErrorMapper.map(const PostgrestException(message: '{kaputt', code: '500'));
+      expect(unknown.kind, AppErrorKind.unknown);
+    });
     test('fehlende Rechte', () {
       final e = ErrorMapper.map(const PostgrestException(message: 'permission denied', code: '42501'));
       expect(e.kind, AppErrorKind.forbidden);
