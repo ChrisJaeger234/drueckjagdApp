@@ -26,6 +26,8 @@ import {
   type ZoneKind,
 } from '../features/hunts/huntModel';
 import type { HuntsService } from '../features/hunts/huntsService';
+import { sortMessages, type ChatMessage, type MessageInput } from '../features/chat/chatModel';
+import type { ChatService } from '../features/chat/chatService';
 
 /** In-Memory-Auth für Tests (wie FakeAuthRepository in der Flutter-App). */
 export class FakeAuth implements AuthService {
@@ -490,4 +492,55 @@ export class FakeHunts implements HuntsService {
     this.positionMap.delete(`${huntId}:${this.uid()}`);
   }
 
+}
+
+export class FakeChat implements ChatService {
+  messageList: ChatMessage[] = [];
+  listeners = new Map<string, Set<() => void>>();
+  /** Simuliert ein Funkloch: send wirft einen Netzwerkfehler. */
+  offline = false;
+  private seq = 0;
+  constructor(private auth: FakeAuth, private groups: FakeGroups, private profiles: FakeProfiles) {}
+
+  private member(groupId: string) {
+    return this.groups.memberList.some((m) => m.groupId === groupId && m.userId === this.auth.user?.id);
+  }
+  private name(userId: string) {
+    const p = this.profiles.profiles.get(userId);
+    return p?.displayName || (p?.username ? `@${p.username}` : null);
+  }
+  private notify(groupId: string) {
+    this.listeners.get(groupId)?.forEach((l) => l());
+  }
+
+  /** Nachricht eines anderen Mitglieds, wie sie per Echtzeit ankäme. */
+  receive(groupId: string, senderId: string, content: string) {
+    this.messageList.push({ id: `m${++this.seq}`, groupId, senderId, senderName: this.name(senderId), content, createdAt: new Date(Date.now() + this.seq).toISOString() });
+    this.notify(groupId);
+  }
+
+  async messages(groupId: string) {
+    if (!this.member(groupId)) return [];
+    return clone(sortMessages(this.messageList.filter((m) => m.groupId === groupId)));
+  }
+  async send(groupId: string, input: MessageInput) {
+    if (this.offline) throw new TypeError('Failed to fetch');
+    if (!this.member(groupId)) throw new AppError('Dafür fehlen dir die Berechtigungen in dieser Gruppe.', 'forbidden');
+    if (this.messageList.some((m) => m.id === input.id)) return;
+    const uid = this.auth.user!.id;
+    this.messageList.push({ id: input.id, groupId, senderId: uid, senderName: this.name(uid), content: input.content, createdAt: new Date(Date.now() + ++this.seq).toISOString() });
+    this.notify(groupId);
+  }
+  async remove(messageId: string) {
+    const m = this.messageList.find((x) => x.id === messageId);
+    if (!m || m.senderId !== this.auth.user?.id) throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    this.messageList = this.messageList.filter((x) => x.id !== messageId);
+    this.notify(m.groupId);
+  }
+  subscribe(groupId: string, onChange: () => void) {
+    const set = this.listeners.get(groupId) ?? new Set();
+    set.add(onChange);
+    this.listeners.set(groupId, set);
+    return () => void set.delete(onChange);
+  }
 }

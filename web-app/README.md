@@ -5,6 +5,16 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 9 (Teil 1: Gruppenchat)
+
+- Ein Chat je Gruppe (`/chat`, `/chat/$groupId`) auf der vorhandenen Tabelle `messages` (RLS: nur
+  Mitglieder lesen und schreiben, nur eigene löschen).
+- Migration 0012 (additiv): `messages` für Supabase Realtime freigegeben, `created_at` setzt der Server.
+- Neue und gelöschte Nachrichten kommen per Realtime ohne Neuladen; zusätzlich alle 30 s neu geladen.
+- Offline schreiben: Nachrichten bekommen eine Geräte-ID, warten wie Meldungen in der Warteschlange
+  („Wartet auf Netz“), überstehen Neustarts und kommen genau einmal an. Der Hinweis oben zählt sie mit.
+- Tests: `supabase/tests/database/chat.test.sql`, `e2e/chat-local.mjs`. Push-Benachrichtigungen folgen in Teil 2.
+
 ## Stand Phase 8
 
 - Live-Standorte während einer laufenden Jagd (Migration 0011, nur additiv: Tabelle
