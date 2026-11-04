@@ -15,7 +15,7 @@ const MESSAGES: Record<number, string> = {
 
 /**
  * Eigener Standort nur zur Anzeige, solange die Seite sichtbar ist. Nichts wird gespeichert
- * oder geteilt; die Freigabe für Treiber und Jagdleitung kommt in Phase 8.
+ * oder geteilt; das Teilen für Treiber und Jagdleitung läuft getrennt (features/live).
  */
 export function useOwnPosition(enabled: boolean): PositionState {
   const [result, setResult] = useState<PositionState | null>(null);

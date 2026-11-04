@@ -18,8 +18,9 @@ import { useBoundaries } from '../reviere/useReviere';
 import { formatHuntTime } from './format';
 import { ParticipantsCard, ReportsCard, StandsCard, ZonesCard, MyParticipation, ReportButtons } from './huntSections';
 import { StatusBadge } from './HuntList';
-import { huntPermissions, isOpenFollowUp, ZONE_KINDS, zoneColor, type Hunt, type ZoneKind } from './huntModel';
-import { useHunt, useHuntActions, useHuntDetails } from './useHunts';
+import { huntPermissions, isOpenFollowUp, livePermissions, ZONE_KINDS, zoneColor, type Hunt, type ZoneKind } from './huntModel';
+import { useHunt, useHuntActions, useHuntDetails, useHuntPositions } from './useHunts';
+import { LiveCard, liveMarkers } from '../live/LiveCard';
 
 const errorText = (e: unknown) => (e ? mapError(e).message : null);
 
@@ -49,6 +50,8 @@ function HuntView({ hunt }: { hunt: Hunt }) {
   const reportList = useMemo(() => reports.data ?? [], [reports.data]);
   const me = people.find((p) => p.userId === user.id) ?? null;
   const perms = huntPermissions(user.id, mine?.role ?? null, me);
+  const live = livePermissions(hunt, mine?.role ?? null, me);
+  const { data: positions = [] } = useHuntPositions(hunt.id, live.canView);
 
   const [layer, setLayer] = useState<LayerId>('karte');
   const [locate, setLocate] = useState(false);
@@ -58,8 +61,8 @@ function HuntView({ hunt }: { hunt: Hunt }) {
   const [notice, setNotice] = useState<string | null>(null);
 
   const markers: MapMarker[] = useMemo(
-    () =>
-      standList.map((s) => {
+    () => [
+      ...standList.map((s) => {
         const names = people.filter((p) => p.standId === s.id).map((p) => p.name);
         return {
           id: s.id,
@@ -71,7 +74,9 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           highlight: me?.standId === s.id,
         };
       }),
-    [standList, people, me?.standId],
+      ...(live.canView ? liveMarkers(positions, people, user.id) : []),
+    ],
+    [standList, people, me?.standId, live.canView, positions, user.id],
   );
   const areas = useMemo(() => zoneList.map((z) => ({ id: z.id, geometry: z.geometry, color: zoneColor(z) })), [zoneList]);
   const fit = useMemo(
@@ -144,6 +149,8 @@ function HuntView({ hunt }: { hunt: Hunt }) {
       )}
 
       <MyParticipation hunt={hunt} me={me} myStand={myStand} zones={zoneList} perms={perms} actions={actions} />
+
+      <LiveCard hunt={hunt} me={me} people={people} positions={positions} live={live} />
 
       {perms.canReport && isOpenOrRecent(hunt) && <ReportButtons huntId={hunt.id} stands={standList} myStandId={me?.standId ?? null} ownPos={ownPos} actions={actions} />}
 

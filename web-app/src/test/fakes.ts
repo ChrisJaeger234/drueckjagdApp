@@ -8,6 +8,8 @@ import type { ReviereService } from '../features/reviere/reviereService';
 import {
   canSelfJoinHunt,
   isLeadRole,
+  livePermissions,
+  type LivePosition,
   sortHunts,
   sortParticipants,
   sortStands,
@@ -323,6 +325,8 @@ export class FakeHunts implements HuntsService {
   standList: Stand[] = [];
   zoneList: Zone[] = [];
   reportList: Report[] = [];
+  /** Live-Positionen je `${huntId}:${userId}`. */
+  positionMap = new Map<string, LivePosition & { huntId: string }>();
   private seq = 0;
   constructor(private auth: FakeAuth, private groups: FakeGroups, private profiles: FakeProfiles) {}
 
@@ -389,6 +393,7 @@ export class FakeHunts implements HuntsService {
   async setStatus(huntId: string, status: HuntStatus) {
     this.requireManage(huntId);
     this.hunts.find((h) => h.id === huntId)!.status = status;
+    if (status !== 'laufend') for (const k of [...this.positionMap.keys()]) if (k.startsWith(`${huntId}:`)) this.positionMap.delete(k);
   }
   async remove(huntId: string) {
     const role = this.groupRole(huntId);
@@ -464,4 +469,25 @@ export class FakeHunts implements HuntsService {
   async removeReport(reportId: string) {
     this.reportList = this.reportList.filter((r) => r.id !== reportId);
   }
+  // Live-Standorte: gleiche Regeln wie Migration 0011.
+  private live(huntId: string) {
+    const h = this.hunts.find((x) => x.id === huntId)!;
+    const me = this.participantList.find((p) => p.huntId === huntId && p.userId === this.uid()) ?? null;
+    return livePermissions(h, this.groupRole(huntId), me);
+  }
+  seedPosition(huntId: string, userId: string, lat = 51.17, lng = 7.25, updatedAt = new Date().toISOString()) {
+    this.positionMap.set(`${huntId}:${userId}`, { huntId, userId, lat, lng, accuracy: 10, updatedAt });
+  }
+  async positions(huntId: string) {
+    const canView = this.live(huntId).canView;
+    return clone([...this.positionMap.values()].filter((p) => p.huntId === huntId && (canView || p.userId === this.uid())).map((p) => ({ userId: p.userId, lat: p.lat, lng: p.lng, accuracy: p.accuracy, updatedAt: p.updatedAt })));
+  }
+  async sharePosition(huntId: string, pos: { lat: number; lng: number; accuracy: number | null }) {
+    if (!this.live(huntId).canShare) throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    this.positionMap.set(`${huntId}:${this.uid()}`, { huntId, userId: this.uid(), ...pos, updatedAt: new Date().toISOString() });
+  }
+  async stopSharing(huntId: string) {
+    this.positionMap.delete(`${huntId}:${this.uid()}`);
+  }
+
 }
