@@ -23,8 +23,8 @@ erst nach deinem OK gemergt.
 | # | Inhalt | Abhängig von | Status |
 | --- | --- | --- | --- |
 | 1 | **Fachmodell Jagd + PostGIS**: Migrationen 0008–0010, pgTAP-Tests, Dart-Modelle, Repository, Berechtigungslogik | – | gemergt (#4), Migrationen eingespielt |
-| 2 | **Jagd-Oberfläche**: Jagden-Liste in Übersicht/Gruppe, Jagd anlegen/bearbeiten, „Ich bin dabei“ mit Rolle, Teilnehmerliste, Stände als Liste anlegen und zuteilen, „Mein Stand“, Schnellmeldungen und Meldungsliste mit offener Nachsuche | 1 | zur Prüfung |
-| 3 | **Karte**: Mapbox-Karte im Tab „Karte“, Reviergrenzen, Einrichtungen (Wegpunkte) anzeigen/anlegen per Langdruck, Zonen und Stände der Jagd, eigener GPS-Standort | 1, Mapbox-Token | Token liegt vor |
+| 2 | **Jagd-Oberfläche**: Jagden-Liste in Übersicht/Gruppe, Jagd anlegen/bearbeiten, „Ich bin dabei“ mit Rolle, Teilnehmerliste, Stände als Liste anlegen und zuteilen, „Mein Stand“, Schnellmeldungen und Meldungsliste mit offener Nachsuche | 1 | gemergt (#5) |
+| 3 | **Karte**: Mapbox-Karte im Tab „Karte“, Reviergrenzen, Einrichtungen (Wegpunkte) anzeigen/anlegen per Langdruck, Zonen und Stände der Jagd, eigener GPS-Standort | 1, Mapbox-Token | zur Prüfung |
 | 4 | **Import**: KML/KMZ (z. B. Export aus Google My Maps) und GPX → Reviergrenzen und Einrichtungen, Vorschau vor dem Speichern | 3 | |
 | 5 | **Live während der Jagd**: Realtime für Meldungen und Teilnehmer, Push-Benachrichtigung bei neuen Meldungen (FCM/APNs über Edge Function) | 2 | |
 | 6 | **Live-Standort** mit ausdrücklicher Zustimmung pro Jagd, nur während die Jagd läuft, sichtbar für Teilnehmer, automatische Löschung nach Jagdende (DSGVO) | 3, 5 | |
@@ -33,6 +33,61 @@ erst nach deinem OK gemergt.
 
 PR 8 ist unabhängig und klein; er kann vorgezogen werden, sobald echte
 Nutzer dazukommen (Passwort vergessen und Konto löschen sind dann Pflicht).
+
+## PR 3 im Detail: Karte
+
+Keine Migration nötig: Grenze, Einrichtungen, Zonen und Stände nutzen die
+Tabellen und Regeln aus Phase 1 und PR 1.
+
+**Tab „Karte“ (Revierkarte)**
+- Startet auf der Reviergrenze (ohne Grenze: Mittelpunkt 51.16868, 7.24749).
+  Bei mehreren Revieren oben auswählen.
+- Hintergrund *Gelände* (Mapbox Outdoors) oder *Luftbild* (Mapbox Satellite
+  mit Straßen), umschaltbar oben rechts.
+- **Mein Standort** unten rechts: blauer Punkt mit Genauigkeitskreis, folgt
+  der Bewegung. Die Position wird nicht gespeichert.
+- **Einrichtungen**: Symbol je Kategorie (Hochsitz, Kanzel, Drückjagdbock …).
+  Tippen zeigt Details und Koordinaten zum Kopieren, Owner/Admins und der
+  Ersteller können bearbeiten und löschen.
+- **Lange drücken** legt an dieser Stelle eine Einrichtung an (Owner/Admins).
+- **Kartenmenü** oben links: ganzes Revier zeigen, Reviergrenze zeichnen bzw.
+  neu zeichnen, Reviergrenze löschen. Gezeichnet wird durch Antippen der
+  Eckpunkte (mit Rückgängig); die Fläche in Hektar steht unten.
+- Revierseite: Abschnitt „Karte & Einrichtungen“ mit Fläche, Anzahl je
+  Kategorie und „Auf der Karte öffnen“.
+
+**Jagdkarte** (Jagd → Kartensymbol oben bzw. „Auf der Karte zeigen“ bei
+„Dein Stand“)
+- Reviergrenze, Zonen (Treiben grün, Sicherheits-/Sperrzone rot, Sammelplatz
+  blau), Stände mit Bezeichnung, Treffpunkt, Einrichtungen blass im
+  Hintergrund.
+- **Dein Stand** ist orange mit Stern; im Menü „Zu meinem Stand“.
+- Stand antippen: wer dort steht, Hinweise, Koordinaten; Jagdleitung kann
+  bearbeiten und löschen.
+- Jagdleitung: **lange drücken** setzt einen Stand (Formular mit
+  vorausgefüllten Koordinaten); Einrichtung antippen → „Als Stand für diese
+  Jagd übernehmen“ (Name und Lage werden übernommen, Verknüpfung bleibt);
+  **Zone zeichnen** im Menü, danach Art und Name wählen. Zone antippen zeigt
+  Art und Fläche, Jagdleitung kann sie löschen.
+
+**Technik**: `flutter_map` 8 mit Mapbox-Rasterkacheln statt nativem Mapbox-SDK,
+damit die App auch im Browser läuft. GPS über `geolocator` (iOS/Android/Web),
+Berechtigungstexte für iOS und Android sind eingetragen. Ohne Mapbox-Token
+zeigt die Karte OpenStreetMap.
+
+**Tests**: 13 neue Unit-Tests (GeoJSON lesen/schreiben, Fläche, Punkt in
+Fläche, Modelle, Kartenquelle, geheimer Token wird abgelehnt, Stand-Link),
+5 neue Widget-Tests (Revierkarte mit Langdruck-Anlage; Grenze zeichnen mit
+Rückgängig; Mitglied ohne Bearbeitung; eigener Standort; Jagdkarte: Einrichtung
+als Stand übernehmen, Stand per Langdruck, Treiben zeichnen) und ein
+Integrationstest für das Karten-Repository. `flutter analyze` ohne Befunde,
+`flutter test` 105 bestanden (14 Integrationstests ohne Backend übersprungen).
+Das Karten-Repository lief zusätzlich gegen PostgREST 12 mit allen
+Migrationen: Chris' KML-Grenze wird als FeatureCollection angenommen und als
+MultiPolygon mit 675 ha gespeichert, erneutes Speichern ersetzt statt zu
+verdoppeln, Mitglieder dürfen lesen, aber weder Grenze noch Einrichtungen
+ändern. Im Browser (Chromium) geprüft: Mapbox-Gelände und -Luftbild laden,
+Revier- und Jagdkarte ohne Konsolenfehler.
 
 ## PR 2 im Detail: Jagd-Oberfläche
 

@@ -188,6 +188,7 @@ class FakeHuntsRepository implements HuntsRepository {
       huntId: huntId,
       label: label.trim(),
       location: GeoPoint(latitude, longitude),
+      waypointId: waypointId,
       zoneId: zoneId,
       description: description,
       sortOrder: sortOrder,

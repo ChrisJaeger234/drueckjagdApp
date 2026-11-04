@@ -33,7 +33,9 @@ lib/
     geo/                         GeoPoint (WGS84) inkl. Einlesen von Koordinaten-Text
     constants/                   App-weite Konstanten
     errors/                      AppException + ErrorMapper (zentral, deutsch)
+    geo/geojson.dart             GeoJSON lesen/schreiben, Fläche, Punkt-in-Fläche
     services/supabase_service.dart  Konfiguration, Start, Supabase-Client-Provider
+    services/location_service.dart  GPS hinter einer Schnittstelle (geolocator)
     utils/                       Validatoren, Formatierung
     widgets/                     Buttons, Eingabefelder, Lade-/Fehler-/Leerzustände,
                                  Karten, Dialoge, Logo, Vorschau-Ansicht
@@ -45,7 +47,8 @@ lib/
     hunts/                       Jagden, Teilnehmer, Zonen, Stände, Meldungen (Phase 2);
                                  Routen /hunts/... liegen außerhalb der Tabs (Vollbild)
     overview/                    Übersicht (Dashboard)
-    map/                         Phase 1: Vorschau + Wegpunkt-Kategorien (Domain)
+    map/                         Revierkarte: Grenze, Einrichtungen, Kartenbasis (AppMap),
+                                 Kartenstil Mapbox/OSM; Jagdkarte liegt in hunts/
     chat/                        Phase 1: Vorschau
 test/
   unit/  widget/  integration/  support/
@@ -101,7 +104,7 @@ gleich.
 
 | Funktion | Ansatzpunkt |
 | --- | --- |
-| Mapbox / Offline-Karten | Feature `map/` (data/domain/presentation); Tab „Karte“ existiert bereits |
+| Mapbox / Offline-Karten | Umgesetzt in PR 3 mit `flutter_map` + Mapbox-Rasterkacheln (läuft auch im Browser); Offline-Ausschnitt folgt in PR 7 |
 | Reviergrenzen, KML/GPX | Tabelle `revier_boundaries` (GeoJSON), PostGIS aktiviert; Spalte `geometry` per Migration ergänzen |
 | Wegpunkte | Tabelle `waypoints` + RLS, Enum `WaypointCategory` in der App |
 | GPS / Live-Standort | Tabelle `locations` + RLS (aktuell nur eigene Daten); neues Feature `location/` |
@@ -114,3 +117,25 @@ gleich.
 
 Die Ordner `location/` und `offline/` wurden noch nicht angelegt, weil leere
 Ordner in Git nicht versioniert werden und noch kein Code dafür existiert.
+
+## Karte (Phase 2, PR 3)
+
+- **Bibliothek:** `flutter_map` statt des nativen Mapbox-SDK. Grund: Die App
+  muss auch im Browser laufen (Test am Windows-PC), das native SDK unterstützt
+  kein Web. Die Kacheln kommen trotzdem von Mapbox (Static Tiles API,
+  Stile `outdoors-v12` und `satellite-streets-v12`). Ohne Token fällt die Karte
+  auf OpenStreetMap zurück.
+- **`AppMap`** (`features/map/presentation/widgets/app_map.dart`) ist die
+  gemeinsame Basis für Revier- und Jagdkarte: Hintergrund, Stilwechsel,
+  eigener Standort, Quellenangabe. Inhalte kommen als Ebenen hinein.
+- **Daten:** `RevierMapRepository` liest/schreibt `revier_boundaries` und
+  `waypoints`. Die Datenbank normalisiert jede Grenze zu einem
+  MultiPolygon (Migration 0009); die App liest nur GeoJSON, nie die
+  Binärspalte `geom`.
+- **Zeichnen:** Flächen (Reviergrenze, Zonen) werden durch Antippen von
+  Eckpunkten gezeichnet; gespeichert wird ein GeoJSON-Polygon.
+- **GPS:** `LocationService` kapselt `geolocator`; Berechtigung wird erst beim
+  Tipp auf „Mein Standort“ angefragt. Die Position bleibt auf dem Gerät –
+  geteilt wird erst mit PR 6 und nur mit Zustimmung.
+- **Tests:** `mapTilesEnabledProvider` schaltet Kacheln in Widget-Tests ab;
+  `FakeLocationService` liefert eine feste Position.

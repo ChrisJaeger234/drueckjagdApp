@@ -62,6 +62,10 @@ abstract final class Validators {
 
   static String? standLabel(String? value) => _requiredLength(value, 'Standnamen', 1, 60);
 
+  static String? waypointName(String? value) => _requiredLength(value, 'Namen', 1, 120);
+
+  static String? zoneName(String? value) => _requiredLength(value, 'Namen', 1, 120);
+
   /// Koordinaten „Breite, Länge“, z. B. aus Google Maps kopiert.
   static String? coordinates(String? value) => GeoPoint.tryParse(value ?? '') == null
       ? 'Bitte Koordinaten als „Breite, Länge“ eingeben, z. B. 51.16868, 7.24749.'

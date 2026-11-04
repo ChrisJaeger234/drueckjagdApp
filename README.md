@@ -1,8 +1,9 @@
 # Drückjagd – Jagd- und Reviermanagement-App
 
 Private App für Jagdgruppen: Benutzerkonten, Gruppen mit Rollen, sichere
-Einladungen und Reviere. Später: gemeinsame Revierkarte, Wegpunkte,
-Standortfreigabe, Chat und Offline-Nutzung.
+Einladungen, Reviere, Drückjagden mit Ständen und Meldungen sowie eine
+gemeinsame Revierkarte (Mapbox) mit Reviergrenze, Einrichtungen und eigenem
+Standort. Später: KML/GPX-Import, Live-Standort, Chat und Offline-Nutzung.
 
 **Stack:** Flutter (iOS/Android, Material 3) · Riverpod · GoRouter ·
 Supabase (Auth, PostgreSQL mit RLS, Storage, PostGIS)
@@ -10,7 +11,7 @@ Supabase (Auth, PostgreSQL mit RLS, Storage, PostGIS)
 ## Schnellstart
 
 ```bash
-cp .env.example .env          # Supabase-URL und Publishable key eintragen
+cp .env.example .env          # Supabase-URL, Publishable key, optional Mapbox-Token
 flutter pub get
 flutter run --dart-define-from-file=.env
 ```

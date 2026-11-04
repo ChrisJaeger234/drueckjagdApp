@@ -9,7 +9,11 @@ import '../../../core/widgets/dialogs.dart';
 import '../../../core/widgets/layout.dart';
 import '../../../core/widgets/state_views.dart';
 import '../../groups/presentation/groups_providers.dart';
+import '../../../core/geo/geojson.dart';
+import '../../map/domain/revier_boundary.dart';
+import '../../map/domain/waypoint.dart';
 import '../../map/domain/waypoint_category.dart';
+import '../../map/presentation/map_providers.dart';
 import '../domain/revier.dart';
 import 'reviere_providers.dart';
 
@@ -98,28 +102,7 @@ class RevierDetailScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.md),
-            SectionCard(
-              title: 'Karte & Reviergrenzen',
-              icon: Icons.map_outlined,
-              trailing: const _PhaseChip(),
-              child: Text(
-                'Die Reviergrenze (Import aus KML/GPX oder Zeichnen auf der Karte) folgt mit der Kartenintegration.',
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            SectionCard(
-              title: 'Jagdliche Einrichtungen',
-              icon: Icons.place_outlined,
-              trailing: const _PhaseChip(),
-              child: Wrap(
-                spacing: AppSpacing.xs,
-                runSpacing: AppSpacing.xs,
-                children: [
-                  for (final c in WaypointCategory.values) Chip(avatar: Icon(c.icon, size: 18), label: Text(c.label)),
-                ],
-              ),
-            ),
+            _RevierMapCard(revierId: r.id),
           ],
         ),
       ),
@@ -127,21 +110,60 @@ class RevierDetailScreen extends ConsumerWidget {
   }
 }
 
-class _PhaseChip extends StatelessWidget {
-  const _PhaseChip();
+class _RevierMapCard extends ConsumerWidget {
+  const _RevierMapCard({required this.revierId});
+
+  final String revierId;
 
   @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xs, vertical: 2),
-      decoration: BoxDecoration(
-        color: scheme.tertiaryContainer,
-        borderRadius: BorderRadius.circular(AppSpacing.radiusSm),
-      ),
-      child: Text(
-        'Phase 2',
-        style: TextStyle(color: scheme.onTertiaryContainer, fontSize: 12, fontWeight: FontWeight.w700),
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final boundaries = ref.watch(revierBoundariesProvider(revierId)).value;
+    final waypoints = ref.watch(revierWaypointsProvider(revierId)).value;
+    final polygons = [for (final b in boundaries ?? const <RevierBoundary>[]) ...b.polygons];
+    final counts = <WaypointCategory, int>{};
+    for (final w in waypoints ?? const <Waypoint>[]) {
+      counts[w.category] = (counts[w.category] ?? 0) + 1;
+    }
+    return SectionCard(
+      title: 'Karte & Einrichtungen',
+      icon: Icons.map_outlined,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            boundaries == null
+                ? 'Lade Kartendaten …'
+                : [
+                    if (polygons.isEmpty)
+                      'Noch keine Reviergrenze'
+                    else
+                      'Reviergrenze ${GeoJson.areaHectares(polygons).round()} ha',
+                    '${waypoints?.length ?? 0} Einrichtungen',
+                  ].join(' · '),
+            style: theme.textTheme.bodyMedium,
+          ),
+          if (counts.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            Wrap(
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: [
+                for (final c in WaypointCategory.values)
+                  if (counts[c] case final n?) Chip(avatar: Icon(c.icon, size: 18), label: Text('${c.label} $n')),
+              ],
+            ),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          FilledButton.tonalIcon(
+            onPressed: () {
+              ref.read(selectedRevierIdProvider.notifier).select(revierId);
+              context.go(Routes.map);
+            },
+            icon: const Icon(Icons.map_outlined),
+            label: const Text('Auf der Karte öffnen'),
+          ),
+        ],
       ),
     );
   }

@@ -4,12 +4,14 @@ import 'package:drueckjagd_app/features/authentication/presentation/auth_provide
 import 'package:drueckjagd_app/features/groups/presentation/groups_providers.dart';
 import 'package:drueckjagd_app/features/hunting_grounds/presentation/reviere_providers.dart';
 import 'package:drueckjagd_app/features/hunts/presentation/hunts_providers.dart';
+import 'package:drueckjagd_app/features/map/presentation/map_providers.dart';
 import 'package:drueckjagd_app/features/profile/presentation/profile_providers.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'fake_hunts.dart';
+import 'fake_map.dart';
 import 'fakes.dart';
 
 /// Baut die komplette App mit In-Memory-Repositories (ohne Netzwerk).
@@ -20,6 +22,7 @@ class TestApp {
       reviere = FakeReviereRepository() {
     groups = FakeGroupsRepository(currentUserId: 'user-1');
     hunts = FakeHuntsRepository(currentUserId: 'user-1');
+    map = FakeRevierMapRepository(currentUserId: 'user-1');
   }
 
   final FakeAuthRepository auth;
@@ -27,6 +30,8 @@ class TestApp {
   final FakeReviereRepository reviere;
   late final FakeGroupsRepository groups;
   late final FakeHuntsRepository hunts;
+  late final FakeRevierMapRepository map;
+  final location = FakeLocationService();
 
   /// Nie benutzter Platzhalter-Client: alle Repositories sind überschrieben.
   static final _unusedClient = SupabaseClient(
@@ -45,6 +50,9 @@ class TestApp {
       groupsRepositoryProvider.overrideWithValue(groups),
       reviereRepositoryProvider.overrideWithValue(reviere),
       huntsRepositoryProvider.overrideWithValue(hunts),
+      revierMapRepositoryProvider.overrideWithValue(map),
+      locationServiceProvider.overrideWithValue(location),
+      mapTilesEnabledProvider.overrideWithValue(false),
     ],
     child: const DrueckjagdApp(),
   );
