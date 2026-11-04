@@ -32,7 +32,7 @@ if (!supabase) {
   const router = createAppRouter({ basepath: base.replace(/\/$/, '') || '/' });
   root.render(
     <StrictMode>
-      <App router={router} services={services} />
+      <App router={router} services={services} persist />
     </StrictMode>,
   );
 }

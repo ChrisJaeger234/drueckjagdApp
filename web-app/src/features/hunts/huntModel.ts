@@ -306,6 +306,8 @@ export interface Report {
   note: string;
   occurredAt: string;
   resolvedAt: string | null;
+  /** Nur lokal: Meldung wartet in der Warteschlange auf Netz. */
+  pending?: boolean;
 }
 
 export const REPORT_COLUMNS =
@@ -347,6 +349,10 @@ export const reportFromRow = (r: ReportRow): Report => ({
 export const isOpenFollowUp = (r: Report) => r.kind === 'angeschossen' && !r.resolvedAt;
 
 export interface ReportInput {
+  /** Vom Gerät vergeben, damit eine wiederholte Übertragung keine doppelte Meldung erzeugt. */
+  id: string;
+  /** Zeitpunkt des Antippens, nicht der Übertragung (wichtig im Funkloch). */
+  occurredAt: string;
   kind: ReportKind;
   species: string;
   count: number;
@@ -382,3 +388,8 @@ export function huntPermissions(userId: string, groupRole: GroupRole | null, me:
 }
 
 export type HuntPermissions = ReturnType<typeof huntPermissions>;
+
+/** Neue Meldung mit Geräte-ID und aktuellem Zeitpunkt. */
+export function newReport(fields: Omit<ReportInput, 'id' | 'occurredAt'>): ReportInput {
+  return { id: crypto.randomUUID(), occurredAt: new Date().toISOString(), ...fields };
+}

@@ -1,4 +1,5 @@
 import { CheckCircle2, Crosshair, Eye, MessageSquare, RotateCcw, Trash2, UserPlus, XCircle } from 'lucide-react';
+import { onlineManager } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
 import { Badge, Button, Card, ConfirmButton } from '../../components/ui';
 import { Field, FormError, FormSuccess } from '../../components/form';
@@ -12,6 +13,7 @@ import {
   HUNT_ROLES,
   isLeadRole,
   needsFollowUp,
+  newReport,
   REPORT_KINDS,
   SELF_ASSIGNABLE_ROLES,
   ZONE_KINDS,
@@ -21,6 +23,7 @@ import {
   type HuntRole,
   type Participant,
   type Report,
+  type ReportInput,
   type ReportKind,
   type Stand,
   type Zone,
@@ -126,7 +129,7 @@ const REPORT_ICONS: Record<ReportKind, typeof Crosshair> = {
   sonstiges: MessageSquare,
 };
 
-export function ReportButtons({ stands, myStandId, ownPos, actions }: { stands: Stand[]; myStandId: string | null; ownPos: OwnPosition | null; actions: HuntActions }) {
+export function ReportButtons({ huntId, stands, myStandId, ownPos, actions }: { huntId: string; stands: Stand[]; myStandId: string | null; ownPos: OwnPosition | null; actions: HuntActions }) {
   const [kind, setKind] = useState<ReportKind | null>(null);
   const [done, setDone] = useState<string | null>(null);
   return (
@@ -161,20 +164,24 @@ export function ReportButtons({ stands, myStandId, ownPos, actions }: { stands: 
           stands={stands}
           myStandId={myStandId}
           ownPos={ownPos}
-          pending={actions.createReport.isPending}
-          error={actions.createReport.error}
           onCancel={() => setKind(null)}
-          onSubmit={(input) =>
-            actions.createReport.mutate(input, {
-              onSuccess: () => {
-                setKind(null);
-                setDone(`Meldung „${REPORT_KINDS[input.kind]}“ gesendet.`);
-              },
-            })
-          }
+          onSubmit={(input) => {
+            // Die Meldung geht sofort in die Warteschlange; ohne Netz wird sie später gesendet.
+            actions.createReport.mutate(
+              { huntId, input },
+              { onSuccess: () => setDone((d) => (d ? `Meldung „${REPORT_KINDS[input.kind]}“ gesendet.` : d)) },
+            );
+            setKind(null);
+            setDone(
+              onlineManager.isOnline()
+                ? `Meldung „${REPORT_KINDS[input.kind]}“ wird gesendet …`
+                : `Kein Netz: Meldung „${REPORT_KINDS[input.kind]}“ ist gespeichert und wird gesendet, sobald wieder Netz da ist.`,
+            );
+          }}
         />
       )}
       {done && <FormSuccess>{done}</FormSuccess>}
+      <FormError message={errorText(actions.createReport.error)} />
     </Card>
   );
 }
@@ -184,8 +191,6 @@ function ReportForm({
   stands,
   myStandId,
   ownPos,
-  pending,
-  error,
   onSubmit,
   onCancel,
 }: {
@@ -193,9 +198,7 @@ function ReportForm({
   stands: Stand[];
   myStandId: string | null;
   ownPos: OwnPosition | null;
-  pending: boolean;
-  error: unknown;
-  onSubmit: (input: Parameters<HuntActions['createReport']['mutate']>[0]) => void;
+  onSubmit: (input: ReportInput) => void;
   onCancel: () => void;
 }) {
   const [species, setSpecies] = useState('');
@@ -207,7 +210,7 @@ function ReportForm({
   function submit(e: FormEvent) {
     e.preventDefault();
     const pos = withPosition && ownPos ? ownPos : null;
-    onSubmit({ kind, species, count, standId, lat: pos?.lat ?? null, lng: pos?.lng ?? null, note });
+    onSubmit(newReport({ kind, species, count, standId, lat: pos?.lat ?? null, lng: pos?.lng ?? null, note }));
   }
 
   return (
@@ -255,10 +258,9 @@ function ReportForm({
           Meinen Standort mitsenden
         </label>
       )}
-      <FormError message={errorText(error)} />
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" variant={kind === 'angeschossen' ? 'danger' : 'primary'} disabled={pending}>
-          {pending ? 'Senden …' : `${REPORT_KINDS[kind]} melden`}
+        <Button type="submit" variant={kind === 'angeschossen' ? 'danger' : 'primary'}>
+          {`${REPORT_KINDS[kind]} melden`}
         </Button>
         <Button variant="secondary" onClick={onCancel}>
           Abbrechen
@@ -483,6 +485,7 @@ export function ReportsCard({ reports, stands, perms, actions }: { reports: Repo
                     {REPORT_KINDS[r.kind]}
                     {r.species && `: ${r.count > 1 ? `${r.count} × ` : ''}${r.species}`}
                   </span>
+                  {r.pending && <Badge tone="signal">Wartet auf Netz</Badge>}
                   {needsFollowUp(r.kind) && (
                     <Badge tone={r.resolvedAt ? 'neutral' : 'signal'}>{r.resolvedAt ? (r.kind === 'angeschossen' ? 'Nachsuche erledigt' : 'Geborgen') : r.kind === 'angeschossen' ? 'Nachsuche offen' : 'Bergung offen'}</Badge>
                   )}
@@ -494,9 +497,10 @@ export function ReportsCard({ reports, stands, perms, actions }: { reports: Repo
                   {r.lat != null ? ' · mit Standort' : ''}
                 </p>
                 {r.note && <p className="text-sm">{r.note}</p>}
-                {perms.canEditReport(r) && (
+                {perms.canEditReport(r) && !r.pending && (
                   <div className="flex flex-wrap gap-2">
-                    {needsFollowUp(r.kind) && (
+                    {r.pending && <Badge tone="signal">Wartet auf Netz</Badge>}
+                  {needsFollowUp(r.kind) && (
                       <Button variant="secondary" onClick={() => actions.setReportResolved.mutate({ id: r.id, resolved: !r.resolvedAt })}>
                         {r.resolvedAt ? <RotateCcw aria-hidden className="size-4" /> : <CheckCircle2 aria-hidden className="size-4" />}
                         {r.resolvedAt ? 'Wieder öffnen' : 'Erledigt'}

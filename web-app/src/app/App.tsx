@@ -3,6 +3,7 @@ import { RouterProvider } from '@tanstack/react-router';
 import { useState } from 'react';
 import { AuthProvider } from '../features/auth/AuthContext';
 import type { createAppRouter } from './router';
+import { OfflineSync } from './OfflineSync';
 import { ServicesProvider, type Services } from './services';
 
 export function createQueryClient() {
@@ -15,12 +16,24 @@ export function createQueryClient() {
   });
 }
 
-export function App({ router, services, queryClient }: { router: ReturnType<typeof createAppRouter>; services: Services; queryClient?: QueryClient }) {
+export function App({
+  router,
+  services,
+  queryClient,
+  persist = false,
+}: {
+  router: ReturnType<typeof createAppRouter>;
+  services: Services;
+  queryClient?: QueryClient;
+  /** Daten in IndexedDB speichern (in der App an, in Tests aus). */
+  persist?: boolean;
+}) {
   const [client] = useState(() => queryClient ?? createQueryClient());
   return (
     <ServicesProvider services={services}>
       <QueryClientProvider client={client}>
         <AuthProvider service={services.auth}>
+          <OfflineSync persist={persist} />
           <RouterProvider router={router} />
         </AuthProvider>
       </QueryClientProvider>

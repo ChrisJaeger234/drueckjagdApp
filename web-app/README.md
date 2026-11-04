@@ -5,6 +5,18 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 6
+
+- Alle geladenen Daten (Gruppen, Reviere, Jagden, Stände, Zonen, Teilnehmer, Meldungen) werden pro
+  Benutzer in IndexedDB gespeichert (`src/lib/offline.ts`) und beim Start sofort gezeigt, auch ohne
+  Netz; mit Netz wird gleich frisch geladen. Beim Abmelden wird der Speicher gelöscht. Die App bittet
+  den Browser um dauerhaften Speicher (`navigator.storage.persist`), damit iOS ihn nicht räumt.
+- Meldungen im Funkloch: Die Meldung erscheint sofort mit „Wartet auf Netz“, liegt in einer
+  Warteschlange, übersteht Neustarts und wird automatisch gesendet. Sie trägt eine Geräte-ID und den
+  Zeitpunkt des Antippens, so entsteht bei Wiederholungen keine Dublette.
+- Der Hinweis oben zeigt, wie viele Meldungen noch warten.
+- Kartenkacheln offline folgen in Phase 7.
+
 ## Stand Phase 5
 
 - Jagden je Gruppe planen (Owner und Admins): Termin, Revier, Treffpunkt, Freigabe,
@@ -96,7 +108,8 @@ Ende-zu-Ende gegen eine lokale Datenbank mit allen Migrationen (siehe Kopf von
 `node e2e/auth-local.mjs`, `node e2e/groups-local.mjs` (zwei Konten: Gruppe, Einladung,
 Beitritt, Rollen, Austritt, Löschen) `node e2e/reviere-local.mjs` (echte Karte: Grenze zeichnen
 und importieren, Einrichtungen, Mitgliedersicht, Standort) und `node e2e/hunts-local.mjs` (Jagd planen,
-selbst eintragen, Stand setzen und zuteilen, Treiben, Meldung und Nachsuche). Alle laufen auch in der CI.
+selbst eintragen, Stand setzen und zuteilen, Treiben, Meldung und Nachsuche) sowie `node e2e/offline-local.mjs`
+(Neustart ohne Netz, Meldung in der Warteschlange, Senden nach Netzrückkehr). Alle laufen auch in der CI.
 
 ## Veröffentlichung
 

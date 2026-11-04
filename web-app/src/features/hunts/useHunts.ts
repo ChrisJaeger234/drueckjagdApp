@@ -1,7 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServices } from '../../app/services';
+import { REPORT_MUTATION_KEY, type ReportVariables } from '../../lib/offline';
 import type { Boundary } from '../reviere/revierModel';
-import type { HuntDraft, HuntRole, HuntStatus, ReportInput, StandInput, ZoneKind } from './huntModel';
+import type { HuntDraft, HuntRole, HuntStatus, StandInput, ZoneKind } from './huntModel';
 
 export const huntKeys = {
   root: ['hunts'] as const,
@@ -62,7 +63,8 @@ export function useHuntActions(huntId: string) {
     createStand: useMutation(m((input: StandInput) => hunts.createStand(huntId, input))),
     updateStand: useMutation(m(({ id, input }: { id: string; input: StandInput }) => hunts.updateStand(id, input))),
     removeStand: useMutation(m((standId: string) => hunts.removeStand(standId))),
-    createReport: useMutation(m((input: ReportInput) => hunts.createReport(huntId, input))),
+    /** Läuft über die Offline-Warteschlange (lib/offline.ts); Variablen: { huntId, input }. */
+    createReport: useMutation<void, Error, ReportVariables>({ mutationKey: REPORT_MUTATION_KEY }),
     setReportResolved: useMutation(m(({ id, resolved }: { id: string; resolved: boolean }) => hunts.setReportResolved(id, resolved))),
     removeReport: useMutation(m((reportId: string) => hunts.removeReport(reportId))),
   };
