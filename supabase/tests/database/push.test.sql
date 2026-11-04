@@ -7,7 +7,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(9);
+select plan(11);
 
 create or replace function pg_temp.login(p_user uuid) returns void
 language plpgsql as $$
@@ -48,6 +48,10 @@ select is((select count(*)::integer from public.push_subscriptions), 0, 'Abo geh
 select is(
   (select count(*)::integer from (select 1 from public.push_subscriptions where endpoint = 'https://push.example/abc') t),
   0, 'f1 kann das übernommene Abo nicht lesen');
+
+-- 10, 11: Versandprotokoll ist für App-Benutzer tabu
+select throws_ok($$select * from public.push_dispatches$$, '42501', null, 'Versandprotokoll nicht lesbar');
+select throws_ok($$insert into public.push_dispatches (kind, ref_id) values ('message', gen_random_uuid())$$, '42501', null, 'Versandprotokoll nicht beschreibbar');
 
 select * from finish();
 rollback;

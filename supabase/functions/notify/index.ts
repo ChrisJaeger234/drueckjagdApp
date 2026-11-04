@@ -8,7 +8,7 @@
 // * Benötigte Secrets: VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT (z. B. mailto:…).
 import { createClient } from 'npm:@supabase/supabase-js@2';
 import webpush from 'npm:web-push@3.6.7';
-import { displayName, isAllowedEndpoint, isFresh, messagePayload, parseRequest, recipients, REPORT_ROLES, reportPayload, type PushPayload } from './logic.ts';
+import { displayName, isAllowedEndpoint, isFresh, MAX_AGE_MS, messagePayload, parseRequest, recipients, REPORT_ROLES, reportPayload, type PushPayload } from './logic.ts';
 
 const cors = {
   'Access-Control-Allow-Origin': '*',
@@ -85,6 +85,11 @@ Deno.serve(async (req) => {
     payload = reportPayload(r, hunt?.title ?? 'Jagd', (r.stand as any)?.label ?? null, displayName(r.reporter as any));
     pref = 'notify_reports';
   }
+
+  // Höchstens einmal je Nachricht bzw. Meldung (auch bei wiederholtem Aufruf).
+  const { error: dupError } = await admin.from('push_dispatches').insert({ kind: request.type, ref_id: request.id });
+  if (dupError) return json(200, { sent: 0, skipped: dupError.code === '23505' ? 'duplicate' : 'error' });
+  void admin.from('push_dispatches').delete().lt('created_at', new Date(Date.now() - 2 * MAX_AGE_MS).toISOString()).then(() => undefined);
 
   if (userIds.length === 0) return json(200, { sent: 0 });
   const { data: subs } = await admin.from('push_subscriptions').select('id, endpoint, p256dh, auth').in('user_id', userIds).eq(pref, true);

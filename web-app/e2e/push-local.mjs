@@ -114,6 +114,8 @@ const sample = received[0];
 check(sample?.headers?.['Content-Encoding'] === 'aes128gcm' && /^vapid t=/.test(sample?.headers?.Authorization ?? ''), 'Chat: Anfrage ist verschlüsselt und mit VAPID signiert');
 check(sample?.payload?.url === `chat/${groupId}` && sample?.payload?.body?.includes('Anna: Treffen 7 Uhr'), 'Chat: Inhalt und Ziel stimmen');
 
+r = await notify(anna, { type: 'message', id: msgId });
+check(r.status === 200 && r.endpoints.length === 0 && r.data?.skipped === 'duplicate', 'Wiederholter Aufruf benachrichtigt nicht noch einmal');
 r = await notify(ben, { type: 'message', id: msgId });
 check(r.status === 403 && r.endpoints.length === 0, 'Fremde Nachricht kann keine Benachrichtigung auslösen');
 r = await notify(dora, { type: 'message', id: msgId });

@@ -90,3 +90,21 @@ $$;
 
 revoke all on function public.register_push_subscription(text, text, text, text, boolean, boolean) from public, anon;
 grant execute on function public.register_push_subscription(text, text, text, text, boolean, boolean) to authenticated;
+
+-- -----------------------------------------------------------------------------
+-- Jede Nachricht bzw. Meldung löst höchstens einmal Benachrichtigungen aus
+-- (Schutz vor wiederholtem Aufruf der Edge Function). Nur die Funktion (Service-
+-- Rolle) schreibt hier; für App-Benutzer ist die Tabelle unsichtbar.
+-- -----------------------------------------------------------------------------
+create table public.push_dispatches (
+  kind        text not null check (kind in ('message', 'report')),
+  ref_id      uuid not null,
+  created_at  timestamptz not null default now(),
+  primary key (kind, ref_id)
+);
+
+comment on table public.push_dispatches is
+  'Bereits verschickte Benachrichtigungen (nur Edge Function notify).';
+
+revoke all on public.push_dispatches from public, anon, authenticated;
+alter table public.push_dispatches enable row level security;
