@@ -5,6 +5,7 @@ import { App } from './app/App';
 import { createAppRouter } from './app/router';
 import { SetupPage } from './app/SetupPage';
 import { createSupabaseAuthService } from './features/auth/authService';
+import { createSupabaseChatService } from './features/chat/chatService';
 import { createSupabaseGroupsService } from './features/groups/groupsService';
 import { createSupabaseHuntsService } from './features/hunts/huntsService';
 import { createSupabaseProfileService } from './features/profile/profileService';
@@ -28,6 +29,7 @@ if (!supabase) {
     groups: createSupabaseGroupsService(supabase),
     reviere: createSupabaseReviereService(supabase),
     hunts: createSupabaseHuntsService(supabase),
+    chat: createSupabaseChatService(supabase),
   };
   const router = createAppRouter({ basepath: base.replace(/\/$/, '') || '/' });
   root.render(

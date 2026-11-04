@@ -11,6 +11,7 @@ import { onlineManager, type QueryClient } from '@tanstack/react-query';
 import { persistQueryClient } from '@tanstack/react-query-persist-client';
 import { del, get, set } from 'idb-keyval';
 import type { Services } from '../app/services';
+import type { ChatMessage, MessageInput } from '../features/chat/chatModel';
 import type { Report, ReportInput } from '../features/hunts/huntModel';
 import { mapError } from './errors';
 
@@ -27,18 +28,32 @@ export interface ReportVariables {
 
 const reportsKey = (huntId: string) => ['hunts', 'one', huntId, 'reports'];
 
+export const MESSAGE_MUTATION_KEY = ['chat-message', 'send'] as const;
+export interface MessageVariables {
+  groupId: string;
+  input: MessageInput;
+}
+export const chatKey = (groupId: string) => ['chat', groupId] as const;
+
+/** Mutationen, die in der Warteschlange überleben (Meldungen und Chatnachrichten). */
+export const QUEUED_MUTATION_KEYS: readonly string[] = [REPORT_MUTATION_KEY[0], MESSAGE_MUTATION_KEY[0]];
+
+const retryOffline = {
+  // Auch bei scheinbarem Netz (Funkloch mit WLAN-Symbol) weiter versuchen, bis es klappt.
+  networkMode: 'online' as const,
+  retry: (_count: number, error: Error) => mapError(error).kind === 'network',
+  retryDelay: (attempt: number) => Math.min(1000 * 2 ** attempt, 30_000),
+};
+
 /**
  * Standardverhalten für Mutationen, die auch nach einem Neustart fortgesetzt werden müssen. Die
  * Funktion muss hier stehen (nicht nur im Hook), sonst weiß der wiederhergestellte Cache nicht,
  * wie er die gespeicherte Meldung senden soll.
  */
-export function registerOfflineMutations(client: QueryClient, services: Pick<Services, 'hunts'>, userId: string) {
+export function registerOfflineMutations(client: QueryClient, services: Pick<Services, 'hunts' | 'chat'>, userId: string) {
   client.setMutationDefaults(REPORT_MUTATION_KEY, {
     mutationFn: ({ huntId, input }: ReportVariables) => services.hunts.createReport(huntId, input),
-    // Auch bei scheinbarem Netz (Funkloch mit WLAN-Symbol) weiter versuchen, bis es klappt.
-    networkMode: 'online',
-    retry: (_count, error) => mapError(error).kind === 'network',
-    retryDelay: (attempt) => Math.min(1000 * 2 ** attempt, 30_000),
+    ...retryOffline,
     onMutate: async ({ huntId, input }: ReportVariables) => {
       await client.cancelQueries({ queryKey: reportsKey(huntId) });
       client.setQueryData<Report[]>(reportsKey(huntId), (old = []) =>
@@ -48,6 +63,20 @@ export function registerOfflineMutations(client: QueryClient, services: Pick<Ser
       );
     },
     onSettled: (_data, _error, { huntId }: ReportVariables) => client.invalidateQueries({ queryKey: reportsKey(huntId) }),
+  });
+
+  client.setMutationDefaults(MESSAGE_MUTATION_KEY, {
+    mutationFn: ({ groupId, input }: MessageVariables) => services.chat.send(groupId, input),
+    ...retryOffline,
+    onMutate: async ({ groupId, input }: MessageVariables) => {
+      await client.cancelQueries({ queryKey: chatKey(groupId) });
+      client.setQueryData<ChatMessage[]>(chatKey(groupId), (old = []) =>
+        old.some((m) => m.id === input.id)
+          ? old
+          : [...old, { id: input.id, groupId, senderId: userId, senderName: null, content: input.content, createdAt: new Date().toISOString(), pending: true }],
+      );
+    },
+    onSettled: (_data, _error, { groupId }: MessageVariables) => client.invalidateQueries({ queryKey: chatKey(groupId) }),
   });
 }
 
@@ -77,7 +106,7 @@ export async function startPersistence(client: QueryClient, userId: string): Pro
     dehydrateOptions: {
       // Auch Meldungen speichern, die gerade (vergeblich) wiederholt werden, nicht nur pausierte:
       // im Funkloch meldet der Browser oft Netz, obwohl keins da ist.
-      shouldDehydrateMutation: (m) => m.state.isPaused || (m.state.status === 'pending' && m.options.mutationKey?.[0] === REPORT_MUTATION_KEY[0]),
+      shouldDehydrateMutation: (m) => m.state.isPaused || (m.state.status === 'pending' && QUEUED_MUTATION_KEYS.includes(String(m.options.mutationKey?.[0]))),
     },
   });
   await restored.catch(() => undefined);

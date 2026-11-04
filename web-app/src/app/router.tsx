@@ -4,6 +4,7 @@ import { LoginPage } from '../features/auth/LoginPage';
 import { NewPasswordPage } from '../features/auth/NewPasswordPage';
 import { RegisterPage } from '../features/auth/RegisterPage';
 import { ChatPage } from '../features/chat/ChatPage';
+import { ChatRoomPage } from '../features/chat/ChatRoomPage';
 import { CreateGroupPage } from '../features/groups/CreateGroupPage';
 import { GroupDetailPage } from '../features/groups/GroupDetailPage';
 import { GroupsPage } from '../features/groups/GroupsPage';
@@ -42,6 +43,7 @@ export const routeTree = rootRoute.addChildren([
     inShell('/jagd/$huntId/bearbeiten', EditHuntPage),
     inShell('/revier/$revierId/bearbeiten', EditRevierPage),
     inShell('/chat', ChatPage),
+    inShell('/chat/$groupId', ChatRoomPage),
     inShell('/profil', ProfilePage),
   ]),
   authRoute('/anmelden', LoginPage),
