@@ -38,8 +38,13 @@ export function createSupabaseChatService(client: SupabaseClient): ChatService {
         .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages', filter: `group_id=eq.${groupId}` }, onChange)
         // Löschungen kommen ohne Gruppenbezug (nur die ID); ein Neuladen ist billig.
         .on('postgres_changes', { event: 'DELETE', schema: 'public', table: 'messages' }, onChange)
-        // Der Kanal ist erst nach dem ersten Laden bereit; was dazwischen kam, jetzt nachladen.
+        // Der Kanal ist erst nach dem ersten Laden bereit; was dazwischen kam, nachladen: sobald der
+        // Kanal steht und noch einmal, sobald Realtime die Datenbank-Änderungen wirklich liefert (das
+        // kann nach einem Kaltstart des Servers einige Sekunden später sein).
         // Nach einem Abbruch (Funkloch) verbindet supabase-js neu und meldet erneut SUBSCRIBED.
+        .on('system', {}, (payload: { extension?: string; status?: string }) => {
+          if (payload.extension === 'postgres_changes' && payload.status === 'ok') onChange();
+        })
         .subscribe((status) => {
           if (status === 'SUBSCRIBED') onChange();
         });

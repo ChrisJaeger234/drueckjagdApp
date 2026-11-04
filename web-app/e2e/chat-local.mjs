@@ -81,13 +81,14 @@ check(await visible(ben.getByText('Treffen 7 Uhr am Hof'), 8000), 'Ben sieht die
 check(await visible(ben.getByRole('list', { name: 'Nachrichten' }).getByText('Anna', { exact: true })), 'mit Absendername');
 
 await send(ben, 'Bin dabei, bringe den Hund mit');
-const replied = await visible(anna.getByText('Bin dabei, bringe den Hund mit'), 8000);
+// Großzügige Frist: nach einem Kaltstart braucht Realtime einige Sekunden, bis es Änderungen liefert.
+const replied = await visible(anna.getByText('Bin dabei, bringe den Hund mit'), 15000);
 check(replied, 'Anna sieht Bens Antwort sofort');
 if (!replied) {
   // Diagnose: ist die Nachricht überhaupt angekommen, und was zeigt Ben?
   console.log(`  Ben zeigt: ${(await ben.getByRole('list', { name: 'Nachrichten' }).innerText()).replace(/\n/g, ' | ')}`);
-  await anna.reload();
-  console.log(`  Anna nach Neuladen: ${(await anna.getByRole('list', { name: 'Nachrichten' }).innerText({ timeout: 10000 })).replace(/\n/g, ' | ')}`);
+  const later = await visible(anna.getByText('Bin dabei, bringe den Hund mit'), 30000);
+  console.log(`  Anna nach weiteren 30 s (Abruf alle 30 s): ${later ? 'angekommen' : 'fehlt'}`);
 }
 
 // Funkloch
