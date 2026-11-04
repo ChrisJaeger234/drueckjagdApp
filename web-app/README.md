@@ -5,6 +5,26 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 9 (Teil 2: Benachrichtigungen)
+
+- **Web-Push** für neue Chatnachrichten und „angeschossen“-Meldungen, auch bei geschlossener App.
+  Einschalten im Profil („Benachrichtigungen“), getrennt für Chat und Nachsuche. Auf dem iPhone
+  nur in der zum Home-Bildschirm hinzugefügten App (iOS 16.4 oder neuer).
+- Nachsuche-Alarm geht an Jagdleiter, Ansteller, Hundeführer und Bergung der Jagd sowie an
+  Owner/Admins der Gruppe; Chat an alle anderen Gruppenmitglieder.
+- Datenbank: Migration `0013_push_subscriptions` (Abos je Gerät, nur eigene sichtbar).
+- Server: Edge Function `supabase/functions/notify`. Prüft, dass der Aufrufer die Nachricht bzw.
+  Meldung selbst verfasst hat, schreibt nur bekannte Push-Dienste an und räumt abgelaufene Abos
+  auf. Der Service-Role-Key existiert nur dort (Supabase stellt ihn bereit), nie in der Web-App.
+- Abmelden aus der App meldet auch das Gerät ab.
+- Einrichtung (einmalig): VAPID-Schlüssel erzeugen (`npx web-push generate-vapid-keys`), in
+  Supabase unter Edge Functions → Secrets `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY` und
+  `VAPID_SUBJECT` (z. B. `mailto:…`) eintragen, dann die Funktion mit dem Workflow
+  „Edge Function „notify“ veröffentlichen“ hochladen. Die App holt sich den öffentlichen
+  Schlüssel von der Funktion; eine weitere GitHub-Variable ist nicht nötig.
+- Tests: `e2e/push-local.mjs` (Funktion mit Deno neben dem lokalen Stack, Empfänger statt echter
+  Push-Dienste, Anzeige im Service Worker per DevTools-Protokoll).
+
 ## Stand Phase 9 (Teil 1: Gruppenchat)
 
 - Ein Chat je Gruppe (`/chat`, `/chat/$groupId`) auf der vorhandenen Tabelle `messages` (RLS: nur

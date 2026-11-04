@@ -7,6 +7,8 @@ import * as V from '../../lib/validators';
 import { useAuth, useUser } from '../auth/AuthContext';
 import { useSubmit } from '../auth/useSubmit';
 import { OfflinePacksCard } from '../offlineMaps/OfflinePacksCard';
+import { PushCard } from '../push/PushCard';
+import { useServices } from '../../app/services';
 import { Avatar } from './Avatar';
 import { isProfileComplete, profileLabel, type Profile } from './profileService';
 import { resizeAvatar } from './resizeImage';
@@ -27,6 +29,7 @@ export function ProfilePage() {
       ) : (
         <ProfileContent profile={profile} />
       )}
+      <PushCard />
       <OfflinePacksCard />
       <SignOutCard />
     </Page>
@@ -140,11 +143,16 @@ function ProfileForm({ profile, onDone }: { profile: Profile; onDone: () => void
 
 function SignOutCard() {
   const { service } = useAuth();
+  const { push } = useServices();
   const { busy, error, run } = useSubmit();
   return (
     <div className="grid gap-2">
       <FormError message={error?.message} />
-      <Button variant="secondary" disabled={busy} onClick={() => run(() => service.signOut())}>
+      <Button variant="secondary" disabled={busy} onClick={() => run(async () => {
+          // Vorher, solange die Anmeldung noch gilt: Abo des Geräts in der Datenbank löschen.
+          await push.disable();
+          await service.signOut();
+        })}>
         <LogOut aria-hidden className="size-4" /> Abmelden
       </Button>
     </div>

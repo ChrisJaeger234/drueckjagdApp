@@ -4,11 +4,13 @@ on:
   pull_request:
     paths:
       - 'web-app/**'
+      - 'supabase/**'
       - '.github/workflows/web-app-ci.yml'
   push:
     branches: [main]
     paths:
       - 'web-app/**'
+      - 'supabase/**'
       - '.github/workflows/web-app-ci.yml'
 
 permissions:
@@ -61,6 +63,21 @@ jobs:
         run: supabase start -x studio,imgproxy,edge-runtime,logflare,vector,supavisor,postgres-meta
       - name: Datenbanktests (pgTAP, RLS-Regeln)
         run: supabase test db
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.1.x
+      - name: Edge Function „notify“ prüfen und lokal starten
+        # Läuft mit Deno direkt neben dem Stack. Test-VAPID-Schlüssel nur für diesen Lauf; statt an
+        # echte Push-Dienste geht die verschlüsselte Anfrage an den Empfänger im Push-Test.
+        run: |
+          deno check supabase/functions/notify/index.ts
+          eval "$(supabase status -o env | grep -E '^(API_URL|PUBLISHABLE_KEY|SECRET_KEY)=')"
+          (SUPABASE_URL="$API_URL" SUPABASE_ANON_KEY="$PUBLISHABLE_KEY" SUPABASE_SERVICE_ROLE_KEY="$SECRET_KEY" \
+            VAPID_PUBLIC_KEY=BLpnMZNQaUhnryQMEgYDNRy-IlD1_1OE8ZpD8zKLmuAoZCiPm_2_WugaHksV7sFaRa4GZ1Y0X62XZ3aBP6dFNsk \
+            VAPID_PRIVATE_KEY=rYaDDR7ffHvHVcGnNUjXEyLYnLA3RS22hs0nZwb0dXs VAPID_SUBJECT=mailto:test@example.com \
+            PUSH_TEST_SINK_URL=http://127.0.0.1:54399/push \
+            deno run -A supabase/functions/notify/index.ts > /tmp/notify.log 2>&1 &)
+          npx -y wait-on@8 -t 120000 tcp:127.0.0.1:8000
       - name: App gegen den lokalen Stack bauen
         working-directory: web-app
         run: |
@@ -82,3 +99,7 @@ jobs:
           NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/offline-maps-local.mjs
           NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/live-local.mjs
           NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ DEBUG_CHAT=1 node e2e/chat-local.mjs
+          NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ FUNCTIONS_URL=http://127.0.0.1:8000 node e2e/push-local.mjs
+      - name: Protokoll der Edge Function
+        if: always()
+        run: cat /tmp/notify.log || true

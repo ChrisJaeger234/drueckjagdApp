@@ -8,6 +8,7 @@ import { createSupabaseAuthService } from './features/auth/authService';
 import { createSupabaseChatService } from './features/chat/chatService';
 import { createSupabaseGroupsService } from './features/groups/groupsService';
 import { createSupabaseHuntsService } from './features/hunts/huntsService';
+import { createSupabasePushService } from './features/push/pushService';
 import { createSupabaseProfileService } from './features/profile/profileService';
 import { createSupabaseReviereService } from './features/reviere/reviereService';
 import { supabase } from './lib/supabase';
@@ -30,6 +31,7 @@ if (!supabase) {
     reviere: createSupabaseReviereService(supabase),
     hunts: createSupabaseHuntsService(supabase),
     chat: createSupabaseChatService(supabase),
+    push: createSupabasePushService(supabase),
   };
   const router = createAppRouter({ basepath: base.replace(/\/$/, '') || '/' });
   root.render(
