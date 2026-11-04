@@ -1,0 +1,61 @@
+@import 'tailwindcss';
+
+/* Farben aus lib/app/theme/app_colors.dart der Flutter-App. */
+@theme {
+  --color-forest-deep: #16291f;
+  --color-forest: #24402f;
+  --color-forest-mid: #3a5e47;
+  --color-moss: #6e8b5e;
+  --color-moss-light: #a9c29a;
+  --color-anthracite: #2a2d2f;
+  --color-charcoal: #17191a;
+  --color-slate: #5b6164;
+  --color-sand: #d9c8a3;
+  --color-sand-light: #ede3cc;
+  --color-beige: #f6f1e6;
+  --color-bark: #7c5f3e;
+  --color-signal: #e07b24;
+  --color-danger: #b3261e;
+  --color-danger-light: #f2b8b5;
+  --color-success: #3f7d4e;
+
+  /* Semantische Tokens, im Dunkelmodus überschrieben. */
+  --color-bg: var(--color-beige);
+  --color-surface: #ffffff;
+  --color-text: var(--color-anthracite);
+  --color-muted: var(--color-slate);
+  --color-line: var(--color-sand);
+  --color-primary: var(--color-forest);
+  --color-on-primary: #ffffff;
+
+  --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --color-bg: var(--color-charcoal);
+    --color-surface: #222628;
+    --color-text: #eceee9;
+    --color-muted: #a5aca7;
+    --color-line: #3a4140;
+    --color-primary: var(--color-moss-light);
+    --color-on-primary: var(--color-forest-deep);
+  }
+}
+
+html {
+  color-scheme: light dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  @apply bg-bg text-text font-sans antialiased;
+  margin: 0;
+}
+
+/* Kein Zoom beim Fokussieren von Eingabefeldern auf iOS: mindestens 16 px. */
+input,
+select,
+textarea {
+  font-size: max(16px, 1em);
+}

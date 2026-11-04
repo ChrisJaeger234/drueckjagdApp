@@ -1,0 +1,78 @@
+# Veröffentlicht auf GitHub Pages (https://<owner>.github.io/<repo>/):
+#   /        PWA-Machbarkeitstest aus Phase 0 (spikes/pwa-test)
+#   /app/    neue Web-App (web-app)
+# Einmalig nötig: Settings → Pages → Source: "GitHub Actions".
+# Supabase-Werte kommen aus Repository-Variablen (Settings → Secrets and variables →
+# Actions → Variables): VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY bzw.
+# VITE_SUPABASE_ANON_KEY. Nur öffentliche Schlüssel, niemals den Service-Role-Key.
+name: GitHub Pages
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'spikes/pwa-test/**'
+      - 'web-app/**'
+      - '.github/workflows/pages.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            spikes/pwa-test/package-lock.json
+            web-app/package-lock.json
+
+      - name: PWA-Test bauen
+        working-directory: spikes/pwa-test
+        run: npm ci && npm test && npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/
+
+      - name: Web-App bauen
+        working-directory: web-app
+        run: npm ci && npm test && npm run build
+        env:
+          BASE_PATH: /${{ github.event.repository.name }}/app/
+          VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
+          VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
+          VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
+
+      - name: Seiten zusammenführen
+        run: |
+          mkdir -p site
+          cp -r spikes/pwa-test/dist/. site/
+          mkdir -p site/app
+          cp -r web-app/dist/. site/app/
+          # GitHub Pages liefert für unbekannte Pfade 404.html aus: so öffnen auch
+          # direkt aufgerufene Unterseiten wie /app/karte die Web-App.
+          cp web-app/dist/index.html site/404.html
+
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

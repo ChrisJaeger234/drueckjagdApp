@@ -44,7 +44,7 @@ npm run e2e         # Rauchtest mit Playwright (Offline-Start, Offline-Karte, GP
 `npm run e2e` braucht Playwright mit Chromium; es wird nicht als Abhängigkeit installiert, sondern
 global erwartet (`NODE_PATH=$(npm root -g)`).
 
-Veröffentlicht wird automatisch über `.github/workflows/pwa-test-pages.yml` auf GitHub Pages,
+Veröffentlicht wird automatisch über `.github/workflows/pages.yml` auf GitHub Pages,
 sobald Änderungen in `main` landen. Einmalig muss im Repository unter
 *Settings → Pages → Source* **GitHub Actions** ausgewählt werden.
 
