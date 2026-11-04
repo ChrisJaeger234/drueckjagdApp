@@ -57,6 +57,9 @@ gemeinsamen Gruppe lesbar; bearbeiten darf man nur das eigene Profil.
 - **Drosselung:** maximal 10 fehlgeschlagene Versuche je Benutzer in 15 Minuten.
   Zusammen mit 60 Bit Entropie ist Raten praktisch ausgeschlossen.
 - Erstellen, Ansehen und Widerrufen nur für Owner bzw. berechtigte Admins.
+- **Entfernte Mitglieder** können Codes, die vor ihrer Entfernung erstellt
+  wurden, nicht mehr einlösen (Migration 0007). Wiederaufnahme nur über eine
+  neue Einladung.
 
 ## Tests der Berechtigungen
 
@@ -78,6 +81,9 @@ Rollen (`authenticated`/`anon`) und JWT-Claims laufen, u. a.:
 
 Zusätzlich prüfen die Integrationstests (`test/integration/`) dieselben Regeln
 über die echten Repositories der App gegen einen laufenden Supabase-Stack.
+
+Ergebnisse des Live-Sicherheitstests gegen das Supabase-Projekt:
+[SECURITY_TEST_PHASE_1.md](SECURITY_TEST_PHASE_1.md).
 
 ## Empfehlungen für den Produktivbetrieb
 
