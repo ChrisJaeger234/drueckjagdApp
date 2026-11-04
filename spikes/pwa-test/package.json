@@ -1,0 +1,26 @@
+{
+  "name": "drueckjagd-pwa-test",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "description": "Phase 0: Machbarkeitstest der PWA-Funktionen auf iPhone und Android",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "e2e": "node e2e/smoke.mjs"
+  },
+  "dependencies": {
+    "@tmcw/togeojson": "7.1.2",
+    "maplibre-gl": "5.9.0",
+    "workbox-precaching": "7.3.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "5.9.3",
+    "vite": "7.1.12",
+    "vite-plugin-pwa": "1.1.0",
+    "vitest": "3.2.4"
+  }
+}
