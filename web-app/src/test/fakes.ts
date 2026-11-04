@@ -3,6 +3,8 @@ import type { AppUser, AuthEvent, AuthService, SignUpResult } from '../features/
 import type { Profile, ProfileService } from '../features/profile/profileService';
 import { inviteStatus, type GroupInvite, type GroupMember, type GroupRole, type HuntingGroup, type MyGroup } from '../features/groups/groupModel';
 import type { GroupsService } from '../features/groups/groupsService';
+import type { Boundary, Revier, RevierBoundary, Waypoint, WaypointInput } from '../features/reviere/revierModel';
+import type { ReviereService } from '../features/reviere/reviereService';
 
 /** In-Memory-Auth für Tests (wie FakeAuthRepository in der Flutter-App). */
 export class FakeAuth implements AuthService {
@@ -201,5 +203,93 @@ export class FakeGroups implements GroupsService {
     inv.useCount++;
     if (!this.roleOf(inv.groupId)) this.addMember(inv.groupId, this.uid(), 'member');
     return inv.groupId;
+  }
+}
+
+/** In-Memory-Reviere; Rechte wie RLS: Owner/Admin schreiben, Owner löscht Reviere. */
+export class FakeReviere implements ReviereService {
+  reviere: Revier[] = [];
+  boundaryList: RevierBoundary[] = [];
+  waypointList: Waypoint[] = [];
+  private seq = 0;
+  constructor(private auth: FakeAuth, private groups: FakeGroups) {}
+
+  private role(groupId: string) {
+    return this.groups.memberList.find((m) => m.groupId === groupId && m.userId === this.auth.user?.id)?.role ?? null;
+  }
+  private requireEditor(revierId: string) {
+    const r = this.reviere.find((x) => x.id === revierId);
+    const role = r ? this.role(r.groupId) : null;
+    if (role !== 'owner' && role !== 'admin') throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    return r!;
+  }
+  private visible() {
+    return this.reviere.filter((r) => this.role(r.groupId));
+  }
+
+  seedRevier(groupId: string, name: string) {
+    const r: Revier = { id: `r${++this.seq}`, name, description: '', groupId, groupName: this.groups.groups.get(groupId)?.name ?? null, createdBy: null, createdAt: '', updatedAt: '' };
+    this.reviere.push(r);
+    return r.id;
+  }
+  seedWaypoint(revierId: string, data: Partial<Waypoint> = {}) {
+    const w: Waypoint = { id: `w${++this.seq}`, revierId, createdBy: null, name: 'Bock 1', description: '', category: 'drueckjagdbock', lat: 51.17, lng: 7.25, ...data };
+    this.waypointList.push(w);
+    return w.id;
+  }
+
+  async all() {
+    return this.visible();
+  }
+  async forGroup(groupId: string) {
+    return this.visible().filter((r) => r.groupId === groupId);
+  }
+  async get(revierId: string) {
+    const r = this.visible().find((x) => x.id === revierId);
+    if (!r) throw new AppError('Dieses Revier existiert nicht oder du hast keinen Zugriff.', 'notFound');
+    return r;
+  }
+  async create({ groupId, name, description }: { groupId: string; name: string; description: string }) {
+    const role = this.role(groupId);
+    if (role !== 'owner' && role !== 'admin') throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    const id = this.seedRevier(groupId, name.trim());
+    const r = this.reviere.find((x) => x.id === id)!;
+    r.description = description;
+    return r;
+  }
+  async update(revierId: string, input: { name: string; description: string }) {
+    Object.assign(this.requireEditor(revierId), input);
+  }
+  async remove(revierId: string) {
+    const r = this.requireEditor(revierId);
+    if (this.role(r.groupId) !== 'owner') throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    this.reviere = this.reviere.filter((x) => x.id !== revierId);
+  }
+  async boundaries(revierIds: string[]) {
+    return this.boundaryList.filter((b) => revierIds.includes(b.revierId));
+  }
+  async saveBoundary(revierId: string, geometry: Boundary) {
+    this.requireEditor(revierId);
+    this.boundaryList = [...this.boundaryList.filter((b) => b.revierId !== revierId), { id: `b${++this.seq}`, revierId, geometry }];
+  }
+  async removeBoundary(revierId: string) {
+    this.requireEditor(revierId);
+    this.boundaryList = this.boundaryList.filter((b) => b.revierId !== revierId);
+  }
+  async waypoints(revierIds: string[]) {
+    return this.waypointList.filter((w) => revierIds.includes(w.revierId));
+  }
+  async createWaypoint(revierId: string, input: WaypointInput) {
+    this.requireEditor(revierId);
+    const id = this.seedWaypoint(revierId, { ...input, createdBy: this.auth.user!.id });
+    return this.waypointList.find((w) => w.id === id)!;
+  }
+  async updateWaypoint(waypointId: string, input: WaypointInput) {
+    const w = this.waypointList.find((x) => x.id === waypointId);
+    if (!w) throw new AppError('Der Eintrag wurde nicht gefunden.', 'notFound');
+    Object.assign(w, input);
+  }
+  async removeWaypoint(waypointId: string) {
+    this.waypointList = this.waypointList.filter((w) => w.id !== waypointId);
   }
 }

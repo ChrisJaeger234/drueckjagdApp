@@ -5,6 +5,19 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 4
+
+- Karte mit MapLibre GL JS und offenen Daten ohne Schlüssel: basemap.de (Karte) und Geobasis NRW
+  (Luftbild); die Karte wird erst geladen, wenn eine Seite sie braucht, und vom Service Worker
+  vorgehalten (Offline-Kachelpakete folgen in Phase 7)
+- Reviere je Gruppe anlegen, bearbeiten (Owner und Admins) und löschen (Owner)
+- Reviergrenze durch Antippen der Eckpunkte zeichnen oder aus KML, GPX oder GeoJSON importieren;
+  die Datenbank prüft und normalisiert sie (Migration 0009), die App zeigt die Fläche in Hektar
+- Einrichtungen (Hochsitz, Drückjagdbock, Kirrung, Sammelplatz, …) per Tipp auf die Karte oder am
+  eigenen Standort setzen, bearbeiten und löschen
+- Übersichtskarte aller Reviere aus allen Gruppen; „Mein Standort“ zeigt die eigene Position nur
+  lokal an, solange die Seite offen ist (keine Speicherung, keine Freigabe)
+
 ## Stand Phase 3
 
 - Gruppen: eigene Gruppen mit Rolle, Gruppe erstellen (RPC `create_group`), bearbeiten und löschen
@@ -66,8 +79,9 @@ NODE_PATH=$(npm root -g) npm run e2e   # Rauchtest mit Playwright
 
 Ende-zu-Ende gegen eine lokale Datenbank mit allen Migrationen (siehe Kopf von
 `e2e/auth-local.mjs`): `supabase start` im Repository, App mit dessen URL und Key bauen, dann
-`node e2e/auth-local.mjs` sowie `node e2e/groups-local.mjs` (zwei Konten: Gruppe, Einladung,
-Beitritt, Rollen, Austritt, Löschen). Beide laufen auch in der CI.
+`node e2e/auth-local.mjs`, `node e2e/groups-local.mjs` (zwei Konten: Gruppe, Einladung,
+Beitritt, Rollen, Austritt, Löschen) und `node e2e/reviere-local.mjs` (echte Karte: Grenze zeichnen
+und importieren, Einrichtungen, Mitgliedersicht, Standort). Alle laufen auch in der CI.
 
 ## Veröffentlichung
 

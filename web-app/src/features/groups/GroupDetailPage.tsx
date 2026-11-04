@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
-import { ArrowLeft, Copy, Share2, UserMinus } from 'lucide-react';
+import { ArrowLeft, ChevronRight, Copy, Plus, Share2, UserMinus } from 'lucide-react';
 import { useState, type FormEvent } from 'react';
 import { Badge, Button, Card, ConfirmButton, Page } from '../../components/ui';
 import { Choice, Field, FormError, FormSuccess, TextArea, Toggle } from '../../components/form';
@@ -19,6 +19,7 @@ import {
 } from './groupModel';
 import { RoleBadge } from './RoleBadge';
 import { useGroupActions, useInvites, useMembers, useMyGroup } from './useGroups';
+import { useGroupReviere } from '../reviere/useReviere';
 
 const errorText = (e: unknown) => (e ? mapError(e).message : null);
 const dateTime = new Intl.DateTimeFormat('de-DE', { dateStyle: 'medium', timeStyle: 'short' });
@@ -51,6 +52,7 @@ export function GroupDetailPage() {
             </div>
             {mine.group.description && <p className="mt-2 whitespace-pre-line text-sm">{mine.group.description}</p>}
           </Card>
+          <GroupReviere groupId={groupId} canCreate={permissions.canCreateRevier} />
           <Members groupId={groupId} permissions={permissions} />
           {permissions.canInvite && <Invites groupId={groupId} />}
           {permissions.canEditGroup && <Settings group={mine.group} />}
@@ -296,6 +298,44 @@ function Danger({ groupId, permissions }: { groupId: string; permissions: GroupP
           />
           <FormError message={errorText(remove.error)} />
         </>
+      )}
+    </Card>
+  );
+}
+
+function GroupReviere({ groupId, canCreate }: { groupId: string; canCreate: boolean }) {
+  const { data: reviere, isPending, error } = useGroupReviere(groupId);
+  return (
+    <Card>
+      <div className="mb-3 flex items-center justify-between gap-2">
+        <h2 className="font-semibold">Reviere</h2>
+        {canCreate && (
+          <Link
+            to="/gruppe/$groupId/revier-neu"
+            params={{ groupId }}
+            className="inline-flex min-h-10 items-center gap-1.5 rounded-xl border border-line bg-surface px-3 text-sm font-medium"
+          >
+            <Plus aria-hidden className="size-4" /> Revier anlegen
+          </Link>
+        )}
+      </div>
+      {isPending ? (
+        <p className="text-sm text-muted">Reviere werden geladen …</p>
+      ) : error ? (
+        <FormError message={errorText(error)} />
+      ) : reviere.length === 0 ? (
+        <p className="text-sm text-muted">Noch keine Reviere in dieser Gruppe.</p>
+      ) : (
+        <ul className="grid gap-1" aria-label="Reviere der Gruppe">
+          {reviere.map((r) => (
+            <li key={r.id}>
+              <Link to="/revier/$revierId" params={{ revierId: r.id }} className="flex min-h-11 items-center gap-2 rounded-xl px-2 hover:bg-sand-light/40">
+                <span className="min-w-0 flex-1 truncate font-medium">{r.name}</span>
+                <ChevronRight aria-hidden className="size-5 text-muted" />
+              </Link>
+            </li>
+          ))}
+        </ul>
       )}
     </Card>
   );
