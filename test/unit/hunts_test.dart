@@ -1,5 +1,5 @@
 import 'package:drueckjagd_app/features/groups/domain/group_role.dart';
-import 'package:drueckjagd_app/features/hunts/domain/geo_point.dart';
+import 'package:drueckjagd_app/core/geo/geo_point.dart';
 import 'package:drueckjagd_app/features/hunts/domain/hunt.dart';
 import 'package:drueckjagd_app/features/hunts/domain/hunt_enums.dart';
 import 'package:drueckjagd_app/features/hunts/domain/hunt_participant.dart';
@@ -7,6 +7,8 @@ import 'package:drueckjagd_app/features/hunts/domain/hunt_permissions.dart';
 import 'package:drueckjagd_app/features/hunts/domain/hunt_report.dart';
 import 'package:drueckjagd_app/features/hunts/domain/hunt_stand.dart';
 import 'package:drueckjagd_app/features/hunts/domain/hunt_zone.dart';
+import 'package:drueckjagd_app/features/hunts/presentation/widgets/hunt_tile.dart';
+import 'package:drueckjagd_app/core/utils/validators.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 const _ts = '2026-11-21T08:00:00Z';
@@ -273,5 +275,46 @@ void main() {
       expect(p.canReport, isFalse);
       expect(p.canManage, isFalse);
     });
+  });
+
+  group('GeoPoint.tryParse', () {
+    test('Format aus Google Maps', () {
+      expect(
+        GeoPoint.tryParse('51.16868205981034, 7.24749484403816'),
+        const GeoPoint(51.16868205981034, 7.24749484403816),
+      );
+    });
+    test('Dezimalkomma mit Semikolon und Leerzeichen-Trenner', () {
+      expect(GeoPoint.tryParse('51,1686; 7,2474'), const GeoPoint(51.1686, 7.2474));
+      expect(GeoPoint.tryParse('51.1686 7.2474'), const GeoPoint(51.1686, 7.2474));
+    });
+    test('ungültig', () {
+      for (final v in ['', 'irgendwo', '51.1', '95, 7', '51, 200', '1,2,3']) {
+        expect(GeoPoint.tryParse(v), isNull, reason: v);
+      }
+      expect(Validators.coordinates('irgendwo'), isNotNull);
+      expect(Validators.coordinates('51.1, 7.2'), isNull);
+    });
+    test('format() ist wieder einlesbar', () {
+      const p = GeoPoint(51.168682, 7.247495);
+      expect(GeoPoint.tryParse(p.format()), p);
+    });
+  });
+
+  test('Sortierung: laufend, dann geplant (nächste zuerst), dann vergangene (neueste zuerst)', () {
+    Hunt h(String id, String status, String start) => Hunt.fromJson(
+      _huntJson(status: status)
+        ..['id'] = id
+        ..['starts_at'] = start,
+    );
+    final sorted = sortHuntsForDisplay([
+      h('alt', 'beendet', '2026-01-10T08:00:00Z'),
+      h('spaeter', 'geplant', '2026-12-12T08:00:00Z'),
+      h('neuer', 'beendet', '2026-02-10T08:00:00Z'),
+      h('bald', 'geplant', '2026-11-21T08:00:00Z'),
+      h('jetzt', 'laufend', '2026-11-04T08:00:00Z'),
+      h('abgesagt', 'abgesagt', '2026-11-28T08:00:00Z'),
+    ]);
+    expect(sorted.map((e) => e.id), ['jetzt', 'bald', 'spaeter', 'neuer', 'alt', 'abgesagt']);
   });
 }

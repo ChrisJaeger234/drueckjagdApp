@@ -22,8 +22,8 @@ erst nach deinem OK gemergt.
 
 | # | Inhalt | Abhängig von | Status |
 | --- | --- | --- | --- |
-| 1 | **Fachmodell Jagd + PostGIS** (dieser PR): Migrationen 0008–0010, pgTAP-Tests, Dart-Modelle, Repository, Berechtigungslogik | – | zur Prüfung |
-| 2 | **Jagd-Oberfläche**: Jagden-Liste in Übersicht/Gruppe, Jagd anlegen/bearbeiten, „Ich bin dabei“ mit Rolle, Teilnehmerliste, Stände als Liste anlegen und zuteilen, „Mein Stand“, Schnellmeldungen und Meldungsliste mit offener Nachsuche | 1 | als Nächstes |
+| 1 | **Fachmodell Jagd + PostGIS**: Migrationen 0008–0010, pgTAP-Tests, Dart-Modelle, Repository, Berechtigungslogik | – | gemergt (#4), Migrationen eingespielt |
+| 2 | **Jagd-Oberfläche**: Jagden-Liste in Übersicht/Gruppe, Jagd anlegen/bearbeiten, „Ich bin dabei“ mit Rolle, Teilnehmerliste, Stände als Liste anlegen und zuteilen, „Mein Stand“, Schnellmeldungen und Meldungsliste mit offener Nachsuche | 1 | zur Prüfung |
 | 3 | **Karte**: Mapbox-Karte im Tab „Karte“, Reviergrenzen, Einrichtungen (Wegpunkte) anzeigen/anlegen per Langdruck, Zonen und Stände der Jagd, eigener GPS-Standort | 1, Mapbox-Token | Token liegt vor |
 | 4 | **Import**: KML/KMZ (z. B. Export aus Google My Maps) und GPX → Reviergrenzen und Einrichtungen, Vorschau vor dem Speichern | 3 | |
 | 5 | **Live während der Jagd**: Realtime für Meldungen und Teilnehmer, Push-Benachrichtigung bei neuen Meldungen (FCM/APNs über Edge Function) | 2 | |
@@ -33,6 +33,48 @@ erst nach deinem OK gemergt.
 
 PR 8 ist unabhängig und klein; er kann vorgezogen werden, sobald echte
 Nutzer dazukommen (Passwort vergessen und Konto löschen sind dann Pflicht).
+
+## PR 2 im Detail: Jagd-Oberfläche
+
+**Wo finde ich was?**
+- *Übersicht*: Abschnitt „Anstehende Jagden“ (laufende zuerst, dann die nächsten).
+- *Gruppe*: Abschnitt „Jagden“ mit „+ Jagd“ für Owner und Admins.
+- *Jagd*: eine Seite mit allem für den Jagdtag.
+
+**Jagd anlegen/bearbeiten** – Titel, Beginn (Vorschlag: nächster Samstag 8 Uhr),
+Ende, Revier, Treffpunkt, Freigabe, Sicherheitshinweise, Notfall, weitere Infos,
+Status, Schalter „Selbst eintragen erlaubt“.
+
+**Jagdseite**
+- Kopf mit Termin, Revier, Status, Zahl der Teilnehmer und Stände.
+- *Bist du dabei?* – „Ich bin dabei“ mit Rollenwahl (ohne Jagdleiter/Ansteller).
+  Danach eine hervorgehobene Karte „Du bist dabei als …“ mit **deinem Stand**
+  (Bezeichnung, Hinweise, Koordinaten) bzw. deiner Zone.
+- *Melden* – vier große Knöpfe: Erlegt, Angeschossen, Überschossen, Anblick.
+  Im Formular: Wildart per Tipp (Schwarzwild, Rehwild, …) oder frei, Anzahl,
+  Stand (eigener vorausgewählt), Notiz.
+- *Offene Nachsuchen* als orangefarbener Hinweis, solange eine „angeschossen“-
+  Meldung nicht erledigt ist.
+- *Wichtig für alle*: Treffpunkt, Freigabe, Sicherheit, Notfall.
+- *Meldungen* mit Melder und Uhrzeit; Melder und Jagdleitung können erledigen
+  oder löschen.
+- *Stände* mit Belegung („frei“ oder Namen); Jagdleitung legt an, bearbeitet,
+  löscht. Koordinaten können direkt aus Google Maps eingefügt werden
+  („51.16868, 7.24749“); mit PR 3 werden Stände auf der Karte gesetzt.
+- *Teilnehmer* mit Rolle, Stand und Zone; Jagdleitung trägt Gruppenmitglieder
+  ein, teilt Stand/Zone zu, ändert Rollen, trägt aus. Jeder kann die eigene
+  Rolle ändern und sich austragen.
+- Menü der Jagdleitung: Bearbeiten, Jagd starten/beenden/absagen, Löschen
+  (nur Owner/Admin).
+
+Zonen werden in PR 3 auf der Karte gezeichnet; die Zuteilung zu Zonen ist in
+der Oberfläche schon vorhanden und erscheint, sobald es Zonen gibt.
+
+**Tests**: 3 neue Widget-Tests (Owner legt Jagd und Stand an, teilt zu,
+meldet; Mitglied trägt sich ein und sieht keine Leitungsfunktionen; ohne
+Selbsteintragung kein „Ich bin dabei“) und Unit-Tests für Koordinaten-Eingabe
+und Sortierung. `flutter analyze` ohne Befunde, `flutter test` 87 bestanden
+(13 Integrationstests ohne Backend übersprungen).
 
 ## PR 1 im Detail
 

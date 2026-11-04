@@ -14,6 +14,9 @@ import '../../features/groups/presentation/groups_screen.dart';
 import '../../features/groups/presentation/join_group_screen.dart';
 import '../../features/hunting_grounds/presentation/revier_detail_screen.dart';
 import '../../features/hunting_grounds/presentation/revier_form_screen.dart';
+import '../../features/hunts/presentation/hunt_detail_screen.dart';
+import '../../features/hunts/presentation/hunt_form_screen.dart';
+import '../../features/hunts/presentation/stand_form_screen.dart';
 import '../../features/map/presentation/map_preview_screen.dart';
 import '../../features/overview/presentation/overview_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
@@ -39,6 +42,30 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: Routes.splash, builder: (_, _) => const SplashScreen()),
       GoRoute(path: Routes.login, builder: (_, _) => const LoginScreen()),
       GoRoute(path: Routes.register, builder: (_, _) => const RegisterScreen()),
+      // Jagden liegen außerhalb der Tabs (Vollbild), erreichbar aus Übersicht und Gruppe.
+      GoRoute(
+        path: '/hunts/new',
+        builder: (_, s) => HuntFormScreen(groupId: s.uri.queryParameters['group'] ?? ''),
+      ),
+      GoRoute(
+        path: '/hunts/:huntId',
+        builder: (_, s) => HuntDetailScreen(huntId: s.pathParameters['huntId']!),
+        routes: [
+          GoRoute(
+            path: 'edit',
+            builder: (_, s) => HuntFormScreen.edit(huntId: s.pathParameters['huntId']!),
+          ),
+          GoRoute(
+            path: 'stands/new',
+            builder: (_, s) => StandFormScreen(huntId: s.pathParameters['huntId']!),
+          ),
+          GoRoute(
+            path: 'stands/:standId/edit',
+            builder: (_, s) =>
+                StandFormScreen(huntId: s.pathParameters['huntId']!, standId: s.pathParameters['standId']),
+          ),
+        ],
+      ),
       StatefulShellRoute.indexedStack(
         builder: (_, _, shell) => AppShell(navigationShell: shell),
         branches: [

@@ -11,6 +11,8 @@ import '../../../core/widgets/state_views.dart';
 import '../../groups/domain/hunting_group.dart';
 import '../../groups/presentation/groups_providers.dart';
 import '../../groups/presentation/groups_screen.dart';
+import '../../hunts/presentation/hunts_providers.dart';
+import '../../hunts/presentation/widgets/hunt_tile.dart';
 import '../../hunting_grounds/domain/revier.dart';
 import '../../hunting_grounds/presentation/reviere_providers.dart';
 import '../../hunting_grounds/presentation/widgets/revier_tile.dart';
@@ -24,7 +26,8 @@ class OverviewScreen extends ConsumerWidget {
     ref
       ..invalidate(currentProfileProvider)
       ..invalidate(myGroupsProvider)
-      ..invalidate(allReviereProvider);
+      ..invalidate(allReviereProvider)
+      ..invalidate(allHuntsProvider);
     await ref.read(myGroupsProvider.future);
   }
 
@@ -33,6 +36,7 @@ class OverviewScreen extends ConsumerWidget {
     final profile = ref.watch(currentProfileProvider).value;
     final groups = ref.watch(myGroupsProvider);
     final reviere = ref.watch(allReviereProvider);
+    final hunts = ref.watch(allHuntsProvider);
 
     return Scaffold(
       appBar: AppBar(title: const Text('Übersicht')),
@@ -54,6 +58,20 @@ class OverviewScreen extends ConsumerWidget {
                   subtitle: const Text('Lege deinen Anzeige- und Benutzernamen fest.'),
                   trailing: const Icon(Icons.chevron_right),
                   onTap: () => context.push(Routes.profileEdit),
+                ),
+              ),
+            ],
+            if (hunts.value case final list? when list.any((h) => h.status.isOpen)) ...[
+              const SectionHeader('Anstehende Jagden'),
+              Card(
+                clipBehavior: Clip.antiAlias,
+                child: Column(
+                  children: [
+                    for (final (i, h) in sortHuntsForDisplay(list).where((h) => h.status.isOpen).indexed) ...[
+                      if (i > 0) const Divider(),
+                      HuntTile(hunt: h),
+                    ],
+                  ],
                 ),
               ),
             ],

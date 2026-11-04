@@ -30,6 +30,7 @@ lib/
     router/                      GoRouter, Routen, Auth-Redirect, Shell (Bottom-Navigation)
     theme/                       Farben, Abstände, Light/Dark-Theme (Material 3)
   core/
+    geo/                         GeoPoint (WGS84) inkl. Einlesen von Koordinaten-Text
     constants/                   App-weite Konstanten
     errors/                      AppException + ErrorMapper (zentral, deutsch)
     services/supabase_service.dart  Konfiguration, Start, Supabase-Client-Provider
@@ -41,7 +42,8 @@ lib/
     profile/                     Profil anzeigen/bearbeiten
     groups/                      Gruppen, Mitglieder, Rollen, Einladungen
     hunting_grounds/             Reviere
-    hunts/                       Jagden, Teilnehmer, Zonen, Stände, Meldungen (Phase 2)
+    hunts/                       Jagden, Teilnehmer, Zonen, Stände, Meldungen (Phase 2);
+                                 Routen /hunts/... liegen außerhalb der Tabs (Vollbild)
     overview/                    Übersicht (Dashboard)
     map/                         Phase 1: Vorschau + Wegpunkt-Kategorien (Domain)
     chat/                        Phase 1: Vorschau
