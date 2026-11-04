@@ -5,6 +5,19 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 10 (Sicherheit)
+
+- Kartenbibliothek MapLibre auf Version 6 (kritische XSS-Lücke in Version 5). Der Karten-Worker
+  wird jetzt mitgebaut und vom Service Worker gespeichert (Offline-Karte).
+- Content-Security-Policy und Referrer-Policy als Meta-Tags im Build (`src/lib/csp.ts`): Skripte
+  nur von der App selbst, Verbindungen nur zu Supabase und den beiden Kartendiensten. Alle
+  e2e-Tests werten CSP-Verstöße als Fehler.
+- Datenbank: Migration `0014_security_hardening` (Triggerfunktion nicht mehr direkt aufrufbar) und
+  `supabase/tests/database/security.test.sql` (RLS überall, `search_path` bei SECURITY DEFINER,
+  keine Rechte für anon, keine tabellenweiten UPDATE-Rechte).
+- `npm audit --omit=dev`: keine Lücken. Offene Meldungen betreffen nur Werkzeuge beim Bauen
+  (ESLint, Workbox) und landen nicht in der App.
+
 ## Stand Phase 9 (Teil 2: Benachrichtigungen)
 
 - **Web-Push** für neue Chatnachrichten und „angeschossen“-Meldungen, auch bei geschlossener App.

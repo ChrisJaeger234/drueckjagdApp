@@ -1,4 +1,8 @@
-import maplibregl, { type GeoJSONSource, type Map as MlMap, type Marker } from 'maplibre-gl';
+import * as maplibregl from 'maplibre-gl';
+import type { GeoJSONSource, Map as MlMap, Marker } from 'maplibre-gl';
+// MapLibre 6 lädt seinen Worker als eigene Datei. Vite bündelt ihn hier samt Abhängigkeiten, damit
+// er im Build liegt, vom Service Worker vorab gespeichert wird (Offline-Karte) und zur CSP passt.
+import workerUrl from 'maplibre-gl/dist/maplibre-gl-worker.mjs?worker&url';
 import 'maplibre-gl/dist/maplibre-gl.css';
 import type { FeatureCollection, Position } from 'geojson';
 import { useEffect, useRef, useState } from 'react';
@@ -53,6 +57,7 @@ let protocolAdded = false;
 function ensureProtocol() {
   if (protocolAdded) return;
   protocolAdded = true;
+  maplibregl.setWorkerUrl(workerUrl);
   for (const id of LAYER_IDS) {
     maplibregl.addProtocol(LAYERS[id].protocol, async (params, abort) => {
       const parsed = parseProtocolUrl(params.url);

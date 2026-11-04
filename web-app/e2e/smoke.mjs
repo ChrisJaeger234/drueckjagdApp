@@ -18,6 +18,8 @@ const context = await browser.newContext({ viewport: { width: 390, height: 844 }
 const page = await context.newPage();
 const errors = [];
 page.on('pageerror', (e) => errors.push(e.message));
+// Phase 10: Verstöße gegen die Content-Security-Policy zählen als Fehler.
+page.on('console', (m) => /Content Security Policy/i.test(m.text()) && errors.push(`CSP ${m.text()}`));
 page.on('console', (m) => m.type() === 'error' && errors.push(m.text()));
 
 await page.goto(URL);

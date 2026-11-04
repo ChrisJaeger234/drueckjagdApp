@@ -41,6 +41,8 @@ await context.route(/sgx\.geodatenzentrum\.de|wmts\.nrw\.de/, (route) => {
 });
 const page = await context.newPage();
 page.on('pageerror', (e) => errors.push(e.message));
+// Phase 10: Verstöße gegen die Content-Security-Policy zählen als Fehler.
+page.on('console', (m) => /Content Security Policy/i.test(m.text()) && errors.push(`CSP ${m.text()}`));
 
 await page.goto(new globalThis.URL('registrieren', URL).toString());
 await page.getByLabel('E-Mail').fill(`karte-${stamp}@example.com`);

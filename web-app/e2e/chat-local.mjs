@@ -26,6 +26,8 @@ async function newUser(name) {
   contexts[name] = context;
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
+  // Phase 10: Verstöße gegen die Content-Security-Policy zählen als Fehler.
+  page.on('console', (m) => /Content Security Policy/i.test(m.text()) && errors.push(`${name}: CSP ${m.text()}`));
   if (process.env.DEBUG_CHAT) {
     page.on('response', (r) => r.url().includes('/rest/v1/messages') && console.log(`  ${name} ${r.request().method()} ${r.status()} ${new Date().toISOString().slice(17, 23)}`));
     page.on('requestfailed', (r) => console.log(`  ${name} FAILED ${r.url()} ${r.failure()?.errorText}`));

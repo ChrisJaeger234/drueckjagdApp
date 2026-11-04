@@ -25,6 +25,8 @@ async function newUser(name) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, permissions: ['clipboard-read', 'clipboard-write'] });
   const page = await context.newPage();
   page.on('pageerror', (e) => errors.push(`${name}: ${e.message}`));
+  // Phase 10: Verstöße gegen die Content-Security-Policy zählen als Fehler.
+  page.on('console', (m) => /Content Security Policy/i.test(m.text()) && errors.push(`${name}: CSP ${m.text()}`));
   await page.goto(new globalThis.URL('registrieren', URL).toString());
   await page.getByLabel('E-Mail').fill(`${name}-${stamp}@example.com`);
   await page.getByLabel('Passwort', { exact: true }).fill('waidmann1');
