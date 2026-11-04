@@ -80,5 +80,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Die Karte zeigt deinen Standort im Revier, z. B. auf dem Weg zu deinem Stand.</string>
 </dict>
 </plist>

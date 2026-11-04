@@ -39,6 +39,11 @@ cp .env.example .env
 # .env öffnen und SUPABASE_URL sowie SUPABASE_PUBLISHABLE_KEY eintragen
 ```
 
+Für die Karte zusätzlich `MAPBOX_ACCESS_TOKEN=pk.…` eintragen (öffentlicher
+Token aus account.mapbox.com → Tokens). Ohne Token zeigt die Karte
+OpenStreetMap, aber kein Luftbild. Änderungen an `.env` wirken erst nach einem
+Neustart mit `flutter run` (ein Hot Reload liest sie nicht neu ein).
+
 `.env` ist in `.gitignore` eingetragen und wird nicht eingecheckt.
 Ohne gültige Werte startet die App mit dem Hinweis „Einrichtung erforderlich“ –
 es wird keine Verbindung vorgetäuscht.

@@ -63,6 +63,30 @@ Admin der Gruppe **oder** Teilnehmer mit Rolle `jagdleiter`/`ansteller`
 - Spaltenrechte verhindern das Umhängen von `group_id`/`hunt_id`, das Fälschen
   von `reporter_id`/`resolved_by` und das direkte Schreiben von `geom`.
 
+## Karte und Standort (Phase 2, PR 3)
+
+| Aktion | Owner/Admin | Ersteller der Einrichtung | Mitglied | Außenstehende |
+| --- | :-: | :-: | :-: | :-: |
+| Reviergrenze und Einrichtungen sehen | ✓ | ✓ | ✓ | ✗ |
+| Reviergrenze zeichnen, ersetzen, löschen | ✓ | – | ✗ | ✗ |
+| Einrichtung anlegen | ✓ | – | ✗ | ✗ |
+| Einrichtung bearbeiten/löschen | ✓ | ✓ | ✗ | ✗ |
+| Stände setzen, Zonen zeichnen (Jagdkarte) | Jagdleitung (siehe oben) | | | |
+
+Durchgesetzt wird das von den bestehenden RLS-Policies aus Phase 1
+(Migration 0003); PR 3 braucht keine neue Migration. Die App blendet nicht
+erlaubte Aktionen aus und zeigt bei Langdruck einen Hinweis.
+
+- **Mapbox-Token:** In der App steht nur ein öffentlicher Token (`pk.…`).
+  Er ist im ausgelieferten Code lesbar; das ist bei Mapbox so vorgesehen. Die
+  App lehnt geheime Tokens (`sk.…`) ab. Empfehlung: im Mapbox-Konto
+  URL-Beschränkungen setzen, sobald die Web-Adresse feststeht, und die
+  Nutzung im Blick behalten (die Static Tiles API hat ein monatliches
+  Freikontingent).
+- **GPS:** Die Berechtigung wird erst beim Tipp auf „Mein Standort“ angefragt
+  („während der Nutzung“, kein Hintergrund). Die Position wird nur angezeigt,
+  nicht gespeichert oder geteilt.
+
 ## Einladungscodes
 
 - Erzeugung serverseitig mit `gen_random_bytes(12)`, 12 Zeichen

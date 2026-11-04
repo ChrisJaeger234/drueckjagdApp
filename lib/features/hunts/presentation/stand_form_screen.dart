@@ -17,10 +17,22 @@ import 'hunts_providers.dart';
 
 /// Stand anlegen ([standId] == null) oder bearbeiten. Nur für die Jagdleitung.
 class StandFormScreen extends ConsumerWidget {
-  const StandFormScreen({super.key, required this.huntId, this.standId});
+  const StandFormScreen({
+    super.key,
+    required this.huntId,
+    this.standId,
+    this.initialPoint,
+    this.waypointId,
+    this.initialLabel,
+  });
 
   final String huntId;
   final String? standId;
+
+  /// Vorbelegung beim Anlegen von der Karte aus.
+  final GeoPoint? initialPoint;
+  final String? waypointId;
+  final String? initialLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,6 +58,9 @@ class StandFormScreen extends ConsumerWidget {
               huntId: huntId,
               existing: standId == null ? null : list.where((s) => s.id == standId).firstOrNull,
               nextNumber: list.length + 1,
+              initialPoint: initialPoint,
+              waypointId: waypointId,
+              initialLabel: initialLabel,
             ),
           );
         },
@@ -55,11 +70,21 @@ class StandFormScreen extends ConsumerWidget {
 }
 
 class _StandForm extends ConsumerStatefulWidget {
-  const _StandForm({required this.huntId, required this.nextNumber, this.existing});
+  const _StandForm({
+    required this.huntId,
+    required this.nextNumber,
+    this.existing,
+    this.initialPoint,
+    this.waypointId,
+    this.initialLabel,
+  });
 
   final String huntId;
   final int nextNumber;
   final HuntStand? existing;
+  final GeoPoint? initialPoint;
+  final String? waypointId;
+  final String? initialLabel;
 
   @override
   ConsumerState<_StandForm> createState() => _StandFormState();
@@ -68,8 +93,8 @@ class _StandForm extends ConsumerStatefulWidget {
 class _StandFormState extends ConsumerState<_StandForm> {
   final _formKey = GlobalKey<FormState>();
   late final HuntStand? _e = widget.existing;
-  late final _label = TextEditingController(text: _e?.label ?? 'Stand ${widget.nextNumber}');
-  late final _coordinates = TextEditingController(text: _e?.location.format() ?? '');
+  late final _label = TextEditingController(text: _e?.label ?? widget.initialLabel ?? 'Stand ${widget.nextNumber}');
+  late final _coordinates = TextEditingController(text: _e?.location.format() ?? widget.initialPoint?.format() ?? '');
   late final _description = TextEditingController(text: _e?.description ?? '');
   late String? _zoneId = _e?.zoneId;
   bool _saving = false;
@@ -94,6 +119,7 @@ class _StandFormState extends ConsumerState<_StandForm> {
           label: _label.text,
           latitude: point.latitude,
           longitude: point.longitude,
+          waypointId: widget.waypointId,
           zoneId: _zoneId,
           description: _description.text,
           sortOrder: widget.nextNumber,
@@ -144,8 +170,8 @@ class _StandFormState extends ConsumerState<_StandForm> {
             prefixIcon: Icons.my_location,
             hint: '51.16868, 7.24749',
             helper:
-                'Breite, Länge – z. B. in Google Maps lange auf den Punkt drücken und kopieren. '
-                'Mit dem Karten-Update setzt du Stände direkt auf der Karte.',
+                'Breite, Länge – am einfachsten auf der Jagdkarte lange auf den Punkt drücken. '
+                'Aus Google Maps kopierte Koordinaten gehen auch.',
             keyboardType: TextInputType.text,
             validator: Validators.coordinates,
           ),

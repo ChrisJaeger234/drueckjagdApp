@@ -6,7 +6,12 @@ import 'dart:convert';
 /// einzelne `--dart-define`-Argumente) gesetzt und niemals im Quellcode
 /// hinterlegt.
 class AppConfig {
-  const AppConfig({required this.supabaseUrl, required this.supabaseAnonKey, this.authRedirectUrl});
+  const AppConfig({
+    required this.supabaseUrl,
+    required this.supabaseAnonKey,
+    this.authRedirectUrl,
+    this.mapboxAccessToken = '',
+  });
 
   /// Liest die Konfiguration aus den Dart-Defines.
   factory AppConfig.fromEnvironment() {
@@ -14,10 +19,12 @@ class AppConfig {
     const anonKey = String.fromEnvironment('SUPABASE_ANON_KEY');
     const publishableKey = String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY');
     const redirect = String.fromEnvironment('AUTH_REDIRECT_URL');
+    const mapbox = String.fromEnvironment('MAPBOX_ACCESS_TOKEN');
     return AppConfig(
       supabaseUrl: url.trim(),
       supabaseAnonKey: (publishableKey.isNotEmpty ? publishableKey : anonKey).trim(),
       authRedirectUrl: redirect.trim().isEmpty ? null : redirect.trim(),
+      mapboxAccessToken: mapbox.trim(),
     );
   }
 
@@ -27,6 +34,11 @@ class AppConfig {
   final String supabaseUrl;
   final String supabaseAnonKey;
   final String? authRedirectUrl;
+
+  /// Öffentlicher Mapbox-Token (`pk.…`). Leer: Karte nutzt OpenStreetMap.
+  final String mapboxAccessToken;
+
+  bool get hasMapbox => mapboxAccessToken.startsWith('pk.');
 
   String get effectiveAuthRedirectUrl => authRedirectUrl ?? defaultAuthRedirectUrl;
 
@@ -49,6 +61,12 @@ class AppConfig {
       problems.add(
         'Der hinterlegte Schlüssel ist ein Secret- bzw. Service-Role-Key. '
         'Diese dürfen niemals in der mobilen App verwendet werden.',
+      );
+    }
+
+    if (mapboxAccessToken.startsWith('sk.')) {
+      problems.add(
+        'MAPBOX_ACCESS_TOKEN ist ein geheimer Token (sk.…). In der App nur öffentliche Tokens (pk.…) verwenden.',
       );
     }
 

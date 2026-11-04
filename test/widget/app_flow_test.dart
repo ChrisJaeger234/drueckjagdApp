@@ -71,7 +71,7 @@ void main() {
     expect(find.textContaining('neu@example.de'), findsOneWidget);
   });
 
-  testWidgets('Angemeldet: Gruppe erstellen, Revier anlegen, Vorschau-Tabs', (tester) async {
+  testWidgets('Angemeldet: Gruppe erstellen, Revier anlegen, Karte, Chat-Vorschau', (tester) async {
     final app = TestApp(
       auth: FakeAuthRepository(
         signedIn: const AppUser(id: 'user-1', email: 'j@example.de'),
@@ -100,12 +100,17 @@ void main() {
     await tester.tap(find.widgetWithText(FilledButton, 'Revier anlegen'));
     await tester.pumpAndSettle();
     expect(app.reviere.reviere.single.name, 'Revier Nord');
-    expect(find.text('Karte & Reviergrenzen'), findsOneWidget);
+    expect(find.text('Karte & Einrichtungen'), findsOneWidget);
+    expect(find.text('Noch keine Reviergrenze · 0 Einrichtungen'), findsOneWidget);
+
+    // Revier auf der Karte öffnen
+    await tester.ensureVisible(find.text('Auf der Karte öffnen'));
+    await tester.tap(find.text('Auf der Karte öffnen'));
+    await tester.pumpAndSettle();
+    expect(find.text('Revier Nord'), findsOneWidget);
+    expect(find.textContaining('Keine Grenze · 0 Einrichtungen'), findsOneWidget);
 
     // Vorschau-Bereiche sind klar gekennzeichnet
-    await tester.tap(find.text('Karte').last);
-    await tester.pumpAndSettle();
-    expect(find.text('In Vorbereitung · Phase 2'), findsOneWidget);
     await tester.tap(find.text('Chat').last);
     await tester.pumpAndSettle();
     expect(find.text('Gruppenchat & Meldungen'), findsOneWidget);

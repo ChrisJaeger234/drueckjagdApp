@@ -93,6 +93,12 @@ class HuntDetailScreen extends ConsumerWidget {
       appBar: AppBar(
         title: Text(hunt?.title ?? 'Jagd'),
         actions: [
+          if (hunt != null)
+            IconButton(
+              tooltip: 'Jagdkarte',
+              icon: const Icon(Icons.map_outlined),
+              onPressed: () => context.push(Routes.huntMap(huntId)),
+            ),
           if (hunt != null && perms != null && perms.canManage)
             PopupMenuButton<_HuntAction>(
               tooltip: 'Jagd verwalten',
@@ -298,6 +304,15 @@ class _MyParticipationCard extends ConsumerWidget {
               Text(
                 stand.location.format(),
                 style: theme.textTheme.bodySmall?.copyWith(color: theme.colorScheme.onPrimaryContainer),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.tonalIcon(
+                  onPressed: () => context.push(Routes.huntMap(hunt.id)),
+                  icon: const Icon(Icons.map_outlined),
+                  label: const Text('Auf der Karte zeigen'),
+                ),
               ),
             ] else if (zone != null)
               Text(

@@ -2,6 +2,8 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/geo/geo_point.dart';
+
 import '../../features/authentication/presentation/auth_providers.dart';
 import '../../features/authentication/presentation/login_screen.dart';
 import '../../features/authentication/presentation/register_screen.dart';
@@ -17,7 +19,8 @@ import '../../features/hunting_grounds/presentation/revier_form_screen.dart';
 import '../../features/hunts/presentation/hunt_detail_screen.dart';
 import '../../features/hunts/presentation/hunt_form_screen.dart';
 import '../../features/hunts/presentation/stand_form_screen.dart';
-import '../../features/map/presentation/map_preview_screen.dart';
+import '../../features/hunts/presentation/hunt_map_screen.dart';
+import '../../features/map/presentation/map_screen.dart';
 import '../../features/overview/presentation/overview_screen.dart';
 import '../../features/profile/presentation/edit_profile_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
@@ -56,8 +59,23 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (_, s) => HuntFormScreen.edit(huntId: s.pathParameters['huntId']!),
           ),
           GoRoute(
+            path: 'map',
+            builder: (_, s) => HuntMapScreen(huntId: s.pathParameters['huntId']!),
+          ),
+          GoRoute(
             path: 'stands/new',
-            builder: (_, s) => StandFormScreen(huntId: s.pathParameters['huntId']!),
+            builder: (_, s) {
+              final q = s.uri.queryParameters;
+              final lat = double.tryParse(q['lat'] ?? ''), lng = double.tryParse(q['lng'] ?? '');
+              return StandFormScreen(
+                huntId: s.pathParameters['huntId']!,
+                initialPoint: lat != null && lng != null && lat.abs() <= 90 && lng.abs() <= 180
+                    ? GeoPoint(lat, lng)
+                    : null,
+                waypointId: q['waypoint'],
+                initialLabel: q['label'],
+              );
+            },
           ),
           GoRoute(
             path: 'stands/:standId/edit',
@@ -73,7 +91,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             routes: [GoRoute(path: Routes.overview, builder: (_, _) => const OverviewScreen())],
           ),
           StatefulShellBranch(
-            routes: [GoRoute(path: Routes.map, builder: (_, _) => const MapPreviewScreen())],
+            routes: [GoRoute(path: Routes.map, builder: (_, _) => const MapScreen())],
           ),
           StatefulShellBranch(
             routes: [

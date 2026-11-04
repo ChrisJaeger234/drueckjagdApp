@@ -12,6 +12,7 @@
 library;
 
 import 'package:drueckjagd_app/core/errors/app_exception.dart';
+import 'package:drueckjagd_app/core/geo/geo_point.dart';
 import 'package:drueckjagd_app/features/authentication/data/supabase_auth_repository.dart';
 import 'package:drueckjagd_app/features/authentication/domain/app_user.dart';
 import 'package:drueckjagd_app/features/groups/data/supabase_groups_repository.dart';
@@ -22,6 +23,9 @@ import 'package:drueckjagd_app/features/hunts/data/supabase_hunts_repository.dar
 import 'package:drueckjagd_app/features/hunts/domain/hunt.dart';
 import 'package:drueckjagd_app/features/hunts/domain/hunt_enums.dart';
 import 'package:drueckjagd_app/features/hunts/domain/hunt_report.dart';
+import 'package:drueckjagd_app/features/map/data/supabase_revier_map_repository.dart';
+import 'package:drueckjagd_app/features/map/domain/waypoint.dart';
+import 'package:drueckjagd_app/features/map/domain/waypoint_category.dart';
 import 'package:drueckjagd_app/features/profile/data/supabase_profile_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -45,6 +49,7 @@ class _Actor {
     groups = SupabaseGroupsRepository(client);
     reviere = SupabaseReviereRepository(client);
     hunts = SupabaseHuntsRepository(client);
+    map = SupabaseRevierMapRepository(client);
   }
 
   final String name;
@@ -54,6 +59,7 @@ class _Actor {
   late final SupabaseGroupsRepository groups;
   late final SupabaseReviereRepository reviere;
   late final SupabaseHuntsRepository hunts;
+  late final SupabaseRevierMapRepository map;
 
   late final String email = '$name.${DateTime.now().microsecondsSinceEpoch}@test.local';
   static const password = 'Waidmann2026';
@@ -312,6 +318,77 @@ void main() {
       await expectLater(bob.hunts.delete(hunt.id), _appError(AppErrorKind.forbidden));
 
       await alice.hunts.delete(hunt.id);
+      await alice.groups.deleteGroup(group.id);
+    });
+  });
+
+  group('Revierkarte (Phase 2)', skip: _skip, () {
+    test('Grenze ersetzen, Einrichtungen anlegen; Mitglieder lesen nur', () async {
+      final group = await alice.groups.createGroup(
+        name: 'Kartentest ${DateTime.now().millisecondsSinceEpoch}',
+        description: '',
+      );
+      final invite = await alice.groups.createInvite(groupId: group.id);
+      await bob.groups.redeemInvite(invite.code);
+      final revier = await alice.reviere.create(
+        groupId: group.id,
+        createdBy: alice.id,
+        name: 'Eichenhain',
+        description: '',
+      );
+
+      final feature = {
+        'type': 'FeatureCollection',
+        'features': [
+          {
+            'type': 'Feature',
+            'properties': <String, dynamic>{},
+            'geometry': {
+              'type': 'Polygon',
+              'coordinates': [
+                [
+                  [7.24, 51.165],
+                  [7.2543, 51.165],
+                  [7.2543, 51.174],
+                  [7.24, 51.165],
+                ],
+              ],
+            },
+          },
+        ],
+      };
+      final first = await alice.map.replaceBoundary(revierId: revier.id, geojson: feature);
+      expect(first.geojson['type'], 'MultiPolygon', reason: 'Server normalisiert');
+      final second = await alice.map.replaceBoundary(revierId: revier.id, geojson: feature);
+      expect(second.id, first.id, reason: 'Grenze wird ersetzt, nicht verdoppelt');
+      expect(await bob.map.fetchBoundaries(revier.id), hasLength(1));
+      await expectLater(
+        bob.map.replaceBoundary(revierId: revier.id, geojson: feature),
+        _appError(AppErrorKind.forbidden),
+      );
+      await expectLater(
+        alice.map.replaceBoundary(
+          revierId: revier.id,
+          geojson: {
+            'type': 'Point',
+            'coordinates': [7.2, 51.1],
+          },
+        ),
+        _appError(AppErrorKind.validation),
+      );
+
+      const draft = WaypointDraft(
+        name: 'Bock am Bach',
+        category: WaypointCategory.drueckjagdbock,
+        location: GeoPoint(51.168, 7.247),
+      );
+      final w = await alice.map.createWaypoint(revierId: revier.id, draft: draft);
+      expect(w.createdBy, alice.id);
+      expect((await bob.map.fetchWaypoints(revier.id)).single.category, WaypointCategory.drueckjagdbock);
+      await expectLater(bob.map.createWaypoint(revierId: revier.id, draft: draft), _appError(AppErrorKind.forbidden));
+      await expectLater(bob.map.deleteWaypoint(w.id), _appError(AppErrorKind.forbidden));
+      expect(await mallory.map.fetchWaypoints(revier.id), isEmpty);
+
       await alice.groups.deleteGroup(group.id);
     });
   });
