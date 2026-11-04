@@ -5,6 +5,17 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 3
+
+- Gruppen: eigene Gruppen mit Rolle, Gruppe erstellen (RPC `create_group`), bearbeiten und löschen
+  (nur Owner), Einstellung „Admins dürfen Mitglieder verwalten“
+- Mitglieder mit Profilbild; Owner ändert Rollen, Owner und berechtigte Admins entfernen Mitglieder;
+  Austritt (der einzige Owner kann nicht austreten)
+- Einladungen mit Gültigkeit (24 h, 7 Tage, 30 Tage) und Nutzungen (1, 5, 20, unbegrenzt); der Code
+  wird nur einmal angezeigt und kann als Link `…/gruppe/beitreten?code=…` geteilt werden; Liste mit
+  Status und Widerruf
+- Rechte werden nur in der Datenbank durchgesetzt (RLS und SQL-Funktionen); die App blendet nur aus
+
 ## Stand Phase 2
 
 - Anmelden, Registrieren mit E-Mail-Bestätigung (erneut senden), Passwort vergessen und neu setzen
@@ -55,7 +66,8 @@ NODE_PATH=$(npm root -g) npm run e2e   # Rauchtest mit Playwright
 
 Ende-zu-Ende gegen eine lokale Datenbank mit allen Migrationen (siehe Kopf von
 `e2e/auth-local.mjs`): `supabase start` im Repository, App mit dessen URL und Key bauen, dann
-`node e2e/auth-local.mjs`. Läuft auch in der CI.
+`node e2e/auth-local.mjs` sowie `node e2e/groups-local.mjs` (zwei Konten: Gruppe, Einladung,
+Beitritt, Rollen, Austritt, Löschen). Beide laufen auch in der CI.
 
 ## Veröffentlichung
 
