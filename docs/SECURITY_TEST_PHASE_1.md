@@ -83,10 +83,13 @@ zuerst geprüft; Unberechtigte bekommen immer `not_authorized`.
   (12 Tests). Lokal gegen PostgreSQL 16 mit 0001–0004, 0006, 0007: 12/12
   bestanden; bestehende `rls.test.sql` 57/57, `review_hardening.test.sql` 15/16
   (der eine Test braucht Supabase-Storage, lokal nicht vorhanden).
-- Nach dem Einspielen von 0007 im Supabase-Projekt wird der Live-Test erneut
-  ausgeführt (siehe PR).
+- **Live-Nachtest nach Einspielen von 0007 (04.11.2026, 09:06):** C entfernt →
+  Wiedereintritt mit altem Code abgelehnt; Außenstehender erhält für Mitglied
+  und Nicht-Mitglied gleichermaßen `not_authorized`; `group_member_removals`
+  für Clients nicht lesbar; mit neuer Einladung ist C wieder aufgenommen.
+  Alle 6 Prüfungen bestanden.
 
 ## Empfehlung
 
-Nach Einspielen von Migration 0007 und erfolgreichem Live-Nachtest ist Phase 1
+Migration 0007 ist eingespielt, der Live-Nachtest ist bestanden. Phase 1 ist
 aus Sicherheitssicht **bereit für Phase 2**.
