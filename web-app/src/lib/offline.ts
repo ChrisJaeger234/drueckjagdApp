@@ -93,5 +93,10 @@ export async function startPersistence(client: QueryClient, userId: string): Pro
 /** Beim Abmelden: Cache im Speicher und auf dem Gerät löschen. */
 export async function clearPersistence(client: QueryClient) {
   client.clear();
-  await del(CACHE_KEY).catch(() => undefined);
+  try {
+    // Ohne IndexedDB (privater Modus, Tests) wirft idb-keyval synchron.
+    await del(CACHE_KEY);
+  } catch {
+    // Nichts gespeichert, nichts zu löschen.
+  }
 }
