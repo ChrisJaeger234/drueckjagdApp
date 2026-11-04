@@ -24,7 +24,7 @@ erst nach deinem OK gemergt.
 | --- | --- | --- | --- |
 | 1 | **Fachmodell Jagd + PostGIS** (dieser PR): Migrationen 0008–0010, pgTAP-Tests, Dart-Modelle, Repository, Berechtigungslogik | – | zur Prüfung |
 | 2 | **Jagd-Oberfläche**: Jagden-Liste in Übersicht/Gruppe, Jagd anlegen/bearbeiten, „Ich bin dabei“ mit Rolle, Teilnehmerliste, Stände als Liste anlegen und zuteilen, „Mein Stand“, Schnellmeldungen und Meldungsliste mit offener Nachsuche | 1 | als Nächstes |
-| 3 | **Karte**: Mapbox-Karte im Tab „Karte“, Reviergrenzen, Einrichtungen (Wegpunkte) anzeigen/anlegen per Langdruck, Zonen und Stände der Jagd, eigener GPS-Standort | 1, Mapbox-Token | wartet auf Token |
+| 3 | **Karte**: Mapbox-Karte im Tab „Karte“, Reviergrenzen, Einrichtungen (Wegpunkte) anzeigen/anlegen per Langdruck, Zonen und Stände der Jagd, eigener GPS-Standort | 1, Mapbox-Token | Token liegt vor |
 | 4 | **Import**: KML/KMZ (z. B. Export aus Google My Maps) und GPX → Reviergrenzen und Einrichtungen, Vorschau vor dem Speichern | 3 | |
 | 5 | **Live während der Jagd**: Realtime für Meldungen und Teilnehmer, Push-Benachrichtigung bei neuen Meldungen (FCM/APNs über Edge Function) | 2 | |
 | 6 | **Live-Standort** mit ausdrücklicher Zustimmung pro Jagd, nur während die Jagd läuft, sichtbar für Teilnehmer, automatische Löschung nach Jagdende (DSGVO) | 3, 5 | |
@@ -124,17 +124,15 @@ Die drei Dateien **nacheinander und jeweils einzeln** ausführen:
 Transaktion nutzbar sind. Alle drei sind rein additiv; bestehende Daten und
 die App aus Phase 1 funktionieren unverändert weiter.
 
-## Was ich von dir brauche
+## Karten-Startansicht
 
-1. **Mapbox-Token** (öffentlicher Token, beginnt mit `pk.`) für PR 3. Er kommt
-   nur in deine lokale `.env`, nie ins Repository. Falls die dann aktuelle
-   Mapbox-SDK-Version für den nativen Build noch einen geheimen Download-Token
-   (`sk.`, Scope `DOWNLOADS:READ`) verlangt, liegt dieser nur auf deinem Rechner
-   (`~/.gradle/gradle.properties` bzw. `~/.netrc`) – das prüfe ich in PR 3 und
-   sage dir genau, was nötig ist.
-2. **Kartenausschnitt deines Reviers** (grob: Ortsname oder Mittelpunkt-Koordinate
-   und Zoomstufe, oder eine Bounding-Box) für die Startansicht, Testdaten und
-   später den Offline-Ausschnitt.
-3. Falls du die Reviergrenzen schon in **Google My Maps** hast: einen
-   KML-Export davon. Damit wird der Import in PR 4 direkt an echten Daten
-   getestet.
+Mittelpunkt 51.16868205981034 N, 7.24749484403816 O, Zoom 13,5
+(`AppConstants.defaultMapCenter`). Die Reviergrenze aus Chris' Google-My-Maps-
+Export (≈ 676 ha) wurde gegen `geojson_to_multipolygon` geprüft und ist gültig;
+sie dient als Testdatensatz für den KML-Import (PR 4) und den Offline-Ausschnitt.
+
+## Von Chris erhalten
+
+- Mapbox-Token (`pk.…`): liegt nur in der lokalen `.env` als
+  `MAPBOX_ACCESS_TOKEN`, nicht im Repository.
+- Kartenmittelpunkt und KML-Export der Reviergrenze (siehe oben).
