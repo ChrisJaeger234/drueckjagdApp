@@ -14,6 +14,9 @@ const check = (ok, msg) => {
   if (!ok) process.exitCode = 1;
 };
 
+// Wartet auf das Element, statt nur den Moment abzufragen (Daten kommen aus getrennten Abfragen).
+const visible = (locator) => locator.waitFor({ timeout: 10000 }).then(() => true, () => false);
+
 const stamp = Date.now().toString(36);
 const browser = await chromium.launch();
 const errors = [];
@@ -42,7 +45,7 @@ await owner.getByRole('link', { name: 'Gruppe erstellen' }).click();
 await owner.getByLabel('Name der Gruppe').fill(`Hegering ${stamp}`);
 await owner.getByRole('button', { name: 'Gruppe erstellen' }).click();
 await owner.getByRole('heading', { level: 1, name: `Hegering ${stamp}` }).waitFor({ timeout: 10000 });
-check(await owner.getByText('Deine Rolle:').locator('..').getByText('Owner').isVisible(), 'Gruppe erstellt (RPC create_group), Ersteller ist Owner');
+check(await visible(owner.getByText('Deine Rolle:').locator('..').getByText('Owner')), 'Gruppe erstellt (RPC create_group), Ersteller ist Owner');
 
 await owner.getByRole('button', { name: '5×' }).click();
 await owner.getByRole('button', { name: 'Einladungscode erzeugen' }).click();
@@ -60,19 +63,19 @@ await member.goto(link);
 check((await member.getByLabel('Einladungscode').inputValue({ timeout: 10000 })) === code, 'Link füllt den Code vor');
 await member.getByRole('button', { name: 'Beitreten' }).click();
 await member.getByRole('heading', { level: 1, name: `Hegering ${stamp}` }).waitFor({ timeout: 10000 });
-check(await member.getByText('Deine Rolle:').locator('..').getByText('Mitglied').isVisible(), 'Beigetreten (RPC redeem_group_invite) als Mitglied');
-check(await member.getByText('Mitglieder (2)').isVisible(), 'Mitglied sieht beide Mitglieder (RLS group_members)');
+check(await visible(member.getByText('Deine Rolle:').locator('..').getByText('Mitglied')), 'Beigetreten (RPC redeem_group_invite) als Mitglied');
+check(await visible(member.getByText('Mitglieder (2)')), 'Mitglied sieht beide Mitglieder (RLS group_members)');
 check(!(await member.getByRole('button', { name: 'Einladungscode erzeugen' }).isVisible()), 'Mitglied sieht keine Einladungsverwaltung');
 
 await owner.reload();
 await owner.getByText('Mitglieder (2)').waitFor({ timeout: 10000 });
-check(await owner.getByText('1 / 5 genutzt').isVisible(), 'Nutzung der Einladung gezählt');
+check(await visible(owner.getByText('1 / 5 genutzt')), 'Nutzung der Einladung gezählt');
 await owner.getByLabel('Rolle von Treiber').selectOption('admin');
 await owner.waitForResponse((r) => r.url().includes('set_group_member_role') && r.ok(), { timeout: 10000 });
 await member.reload();
 await member.getByText('Deine Rolle:').locator('..').getByText('Admin').waitFor({ timeout: 10000 });
 check(true, 'Owner ernennt Mitglied zum Admin (RPC set_group_member_role)');
-check(await member.getByRole('button', { name: 'Einladungscode erzeugen' }).isVisible(), 'Admin darf einladen (admins_can_manage_members)');
+check(await visible(member.getByRole('button', { name: 'Einladungscode erzeugen' })), 'Admin darf einladen (admins_can_manage_members)');
 
 await owner.getByRole('button', { name: 'Gruppe verlassen' }).click();
 await owner.getByRole('button', { name: 'Ja, verlassen' }).click();
