@@ -146,20 +146,22 @@ export function createSupabaseHuntsService(client: SupabaseClient): HuntsService
         ).map(reportFromRow),
       ),
     createReport: (huntId, r) =>
-      guard(async () =>
-        check(
-          await client.from('hunt_reports').insert({
-            hunt_id: huntId,
-            kind: r.kind,
-            species: r.species.trim(),
-            count: r.count,
-            stand_id: r.standId,
-            latitude: r.lat,
-            longitude: r.lng,
-            note: r.note.trim(),
-          }),
-        ),
-      ),
+      guard(async () => {
+        const { error } = await client.from('hunt_reports').insert({
+          id: r.id,
+          hunt_id: huntId,
+          kind: r.kind,
+          species: r.species.trim(),
+          count: r.count,
+          stand_id: r.standId,
+          latitude: r.lat,
+          longitude: r.lng,
+          note: r.note.trim(),
+          occurred_at: r.occurredAt,
+        });
+        // Schon angekommen (z. B. Antwort ging im Funkloch verloren): kein Fehler, keine Dublette.
+        if (error && !(error.code === '23505' && error.message.includes('hunt_reports_pkey'))) throw error;
+      }),
     setReportResolved: (reportId, resolved) => guard(() => updateOne('hunt_reports', reportId, { resolved_at: resolved ? new Date().toISOString() : null })),
     removeReport: (reportId) => guard(() => deleteOne('hunt_reports', reportId)),
   };

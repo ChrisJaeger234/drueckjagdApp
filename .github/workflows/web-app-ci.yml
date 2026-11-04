@@ -75,3 +75,4 @@ jobs:
           NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/groups-local.mjs
           NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/reviere-local.mjs
           NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/hunts-local.mjs
+          NODE_PATH=$(npm root -g) APP_URL=http://localhost:4181/ node e2e/offline-local.mjs

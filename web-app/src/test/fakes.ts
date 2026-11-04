@@ -455,7 +455,8 @@ export class FakeHunts implements HuntsService {
     return clone(this.reportList.filter((r) => r.huntId === huntId));
   }
   async createReport(huntId: string, r: ReportInput) {
-    this.reportList.unshift({ id: `rep${++this.seq}`, huntId, reporterId: this.uid(), reporterName: this.name(this.uid()), occurredAt: new Date().toISOString(), resolvedAt: null, ...r });
+    if (this.reportList.some((x) => x.id === r.id)) return;
+    this.reportList.unshift({ huntId, reporterId: this.uid(), reporterName: this.name(this.uid()), resolvedAt: null, ...r });
   }
   async setReportResolved(reportId: string, resolved: boolean) {
     this.reportList.find((r) => r.id === reportId)!.resolvedAt = resolved ? new Date().toISOString() : null;

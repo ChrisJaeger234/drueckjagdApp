@@ -75,7 +75,7 @@ check((await page.getByRole('alert').textContent({ timeout: 10000 }))?.includes(
 await page.getByLabel('Passwort', { exact: true }).fill(password);
 await page.getByRole('button', { name: 'Anmelden' }).click();
 await page.getByRole('heading', { level: 1, name: 'Übersicht' }).waitFor({ timeout: 10000 });
-check(await page.getByText('Waidmannsheil, Max Testjäger!').isVisible({ timeout: 10000 }), 'Wieder angemeldet, Übersicht begrüßt mit Profilnamen');
+check(await page.getByText('Waidmannsheil, Max Testjäger!').waitFor({ timeout: 10000 }).then(() => true, () => false), 'Wieder angemeldet, Übersicht begrüßt mit Profilnamen');
 
 check(errors.length === 0, `keine Seitenfehler${errors.length ? ': ' + errors.join(' | ') : ''}`);
 await browser.close();

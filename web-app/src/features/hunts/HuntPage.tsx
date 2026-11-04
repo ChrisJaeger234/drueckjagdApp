@@ -143,7 +143,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
 
       <MyParticipation hunt={hunt} me={me} myStand={myStand} zones={zoneList} perms={perms} actions={actions} />
 
-      {perms.canReport && isOpenOrRecent(hunt) && <ReportButtons stands={standList} myStandId={me?.standId ?? null} ownPos={ownPos} actions={actions} />}
+      {perms.canReport && isOpenOrRecent(hunt) && <ReportButtons huntId={hunt.id} stands={standList} myStandId={me?.standId ?? null} ownPos={ownPos} actions={actions} />}
 
       <MapToolbar layer={layer} onLayer={setLayer} locate={locate} onLocate={setLocate} position={position} />
       <LazyMap
