@@ -23,7 +23,7 @@ import {
   type Stand,
   type StandInput,
   type Zone,
-  type ZoneKind,
+  type ZoneInput,
 } from '../features/hunts/huntModel';
 import type { HuntsService } from '../features/hunts/huntsService';
 import { sortMessages, type ChatMessage, type MessageInput } from '../features/chat/chatModel';
@@ -434,9 +434,9 @@ export class FakeHunts implements HuntsService {
   async zones(huntId: string) {
     return clone(this.zoneList.filter((z) => z.huntId === huntId));
   }
-  async createZone(huntId: string, { name, kind, geometry }: { name: string; kind: ZoneKind; geometry: Boundary }) {
+  async createZone(huntId: string, { name, kind, geometry, color }: ZoneInput) {
     this.requireManage(huntId);
-    this.zoneList.push({ id: `z${++this.seq}`, huntId, name, kind, description: '', color: null, geometry });
+    this.zoneList.push({ id: `z${++this.seq}`, huntId, name, kind, description: '', color: color ?? null, geometry });
   }
   async removeZone(zoneId: string) {
     this.zoneList = this.zoneList.filter((z) => z.id !== zoneId);

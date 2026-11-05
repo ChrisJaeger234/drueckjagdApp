@@ -95,6 +95,25 @@ for (const [fx, fy] of [[0.2, 0.2], [0.8, 0.2], [0.8, 0.8], [0.2, 0.8]]) await c
 await lead.getByLabel('Name der Zone').fill('Treiben 1');
 await lead.getByRole('button', { name: 'Zone speichern' }).click();
 check(await visible(lead.getByText('Treiben „Treiben 1“ gespeichert.')), 'Treiben gezeichnet (Trigger normalisiert die Fläche)');
+
+// Karten-Import (KML wie aus Google My Maps): Fläche wird Zone mit Farbe, Punkte werden Stände.
+const kmlText = `<?xml version="1.0" encoding="UTF-8"?><kml xmlns="http://www.opengis.net/kml/2.2"><Document>
+<Style id="rot"><PolyStyle><color>4d5252ff</color></PolyStyle></Style>
+<Placemark><name>TW2 - Runde 1</name><styleUrl>#rot</styleUrl><Polygon><outerBoundaryIs><LinearRing><coordinates>7.2484844,51.1749709,0 7.2451885,51.1702711,0 7.2466304,51.1698908,0 7.2503498,51.1747198,0 7.2484844,51.1749709,0</coordinates></LinearRing></outerBoundaryIs></Polygon></Placemark>
+<Placemark><name>Stand 1</name><Point><coordinates>7.25,51.17,0</coordinates></Point></Placemark>
+<Placemark><name>DJB #10</name><Point><coordinates>7.2446752,51.1597495,0</coordinates></Point></Placemark>
+</Document></kml>`;
+await lead.getByTestId('hunt-import-file').setInputFiles({ name: 'Treiben.kml', mimeType: 'application/vnd.google-earth.kml+xml', buffer: Buffer.from(kmlText) });
+check(await visible(lead.getByRole('list', { name: 'Stände aus der Datei' }).getByText('gibt es schon')), 'Import-Vorschau erkennt vorhandenen Stand');
+if (shot) await lead.screenshot({ path: `${shot}/jagd-import.png`, fullPage: true });
+await lead.getByRole('button', { name: '1 Zone und 1 Stand übernehmen' }).click();
+check(await visible(lead.getByText('1 Zone und 1 Stand übernommen.')), 'Karte importiert (Zone und Stand in der Datenbank)');
+check(await visible(lead.getByRole('list', { name: 'Zonen' }).getByText('TW2 - Runde 1')), 'Importierte Zone erscheint');
+check(await visible(lead.getByRole('list', { name: 'Stände' }).getByText('DJB #10')), 'Importierter Stand erscheint');
+check(
+  (await lead.getByRole('list', { name: 'Zonen' }).locator('li', { hasText: 'TW2 - Runde 1' }).locator('span').first().evaluate((el) => getComputedStyle(el).backgroundColor)) === 'rgb(255, 82, 82)',
+  'Farbe aus der KML übernommen',
+);
 await lead.getByRole('button', { name: 'Jagd starten' }).click();
 check(await visible(lead.getByRole('button', { name: 'Jagd beenden' })), 'Jagd gestartet');
 

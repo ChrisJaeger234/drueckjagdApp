@@ -268,6 +268,14 @@ export interface Zone {
   geometry: Boundary;
 }
 
+export interface ZoneInput {
+  name: string;
+  kind: ZoneKind;
+  geometry: Boundary;
+  /** #rrggbb, sonst Farbe der Zonenart. */
+  color?: string | null;
+}
+
 export const ZONE_COLUMNS = 'id, hunt_id, name, kind, description, color, boundary_data';
 
 export interface ZoneRow {

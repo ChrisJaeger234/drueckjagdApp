@@ -1,6 +1,5 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AppError, check, guard, unwrap } from '../../lib/errors';
-import type { Boundary } from '../reviere/revierModel';
 import {
   HUNT_COLUMNS,
   PARTICIPANT_COLUMNS,
@@ -34,7 +33,7 @@ import {
   type StandInput,
   type StandRow,
   type Zone,
-  type ZoneKind,
+  type ZoneInput,
   type ZoneRow,
 } from './huntModel';
 
@@ -56,7 +55,7 @@ export interface HuntsService {
   removeParticipant(participantId: string): Promise<void>;
 
   zones(huntId: string): Promise<Zone[]>;
-  createZone(huntId: string, input: { name: string; kind: ZoneKind; geometry: Boundary }): Promise<void>;
+  createZone(huntId: string, input: ZoneInput): Promise<void>;
   removeZone(zoneId: string): Promise<void>;
 
   stands(huntId: string): Promise<Stand[]>;
@@ -135,8 +134,8 @@ export function createSupabaseHuntsService(client: SupabaseClient): HuntsService
       guard(async () =>
         unwrap(await client.from('hunt_zones').select(ZONE_COLUMNS).eq('hunt_id', huntId).order('name').returns<ZoneRow[]>()).map(zoneFromRow),
       ),
-    createZone: (huntId, { name, kind, geometry }) =>
-      guard(async () => check(await client.from('hunt_zones').insert({ hunt_id: huntId, name: name.trim(), kind, boundary_data: geometry }))),
+    createZone: (huntId, { name, kind, geometry, color }) =>
+      guard(async () => check(await client.from('hunt_zones').insert({ hunt_id: huntId, name: name.trim(), kind, boundary_data: geometry, color: color ?? null }))),
     removeZone: (zoneId) => guard(() => deleteOne('hunt_zones', zoneId)),
 
     stands: (huntId) =>
