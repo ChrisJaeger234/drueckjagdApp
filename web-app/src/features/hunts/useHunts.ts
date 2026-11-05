@@ -1,4 +1,4 @@
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServices } from '../../app/services';
 import { REPORT_MUTATION_KEY, type ReportVariables } from '../../lib/offline';
 import { AppError, mapError } from '../../lib/errors';
@@ -103,4 +103,15 @@ export function useHuntPositions(huntId: string, enabled: boolean) {
     refetchInterval: enabled ? 10_000 : false,
     staleTime: 5_000,
   });
+}
+
+/** Zonen und Stände mehrerer Jagden (Reiter „Karte“), aus denselben Caches wie die Jagdseite. */
+export function useHuntsMapData(huntIds: string[]) {
+  const { hunts } = useServices();
+  const zones = useQueries({ queries: huntIds.map((id) => ({ queryKey: huntKeys.part(id, 'zones'), queryFn: () => hunts.zones(id) })) });
+  const stands = useQueries({ queries: huntIds.map((id) => ({ queryKey: huntKeys.part(id, 'stands'), queryFn: () => hunts.stands(id) })) });
+  return {
+    zones: zones.flatMap((q) => q.data ?? []),
+    stands: stands.flatMap((q) => q.data ?? []),
+  };
 }

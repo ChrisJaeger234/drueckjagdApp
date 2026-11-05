@@ -151,3 +151,17 @@ describe('Karten-Import (Jagd)', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('keine gültige KML');
   });
 });
+
+describe('Reiter „Karte“', () => {
+  it('zeigt Zonen und Stände geplanter und laufender Jagden', async () => {
+    const s = setup();
+    const groupId = s.hunts.hunts.find((h) => h.id === s.huntId)!.groupId;
+    s.hunts.seedHunt(groupId, { title: 'Vorbei', status: 'beendet' });
+    Object.assign(s.hunts.hunts.find((h) => h.id === s.huntId)!, { title: 'Drückjagd Nord' });
+    renderApp('/karte', s);
+    const list = await screen.findByRole('list', { name: 'Offene Jagden' });
+    expect(within(list).getByText('Drückjagd Nord')).toBeInTheDocument();
+    expect(within(list).queryByText('Vorbei')).not.toBeInTheDocument();
+    expect(await screen.findByRole('button', { name: 'Marker Langer Kanzel' })).toBeInTheDocument();
+  });
+});
