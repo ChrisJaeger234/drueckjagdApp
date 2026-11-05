@@ -1,4 +1,5 @@
-import { Camera, LogOut } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
+import { Camera, KeyRound, LogOut } from 'lucide-react';
 import { useRef, useState, type FormEvent } from 'react';
 import { Button, Card, Page } from '../../components/ui';
 import { Field, FormError, FormSuccess } from '../../components/form';
@@ -144,10 +145,14 @@ function ProfileForm({ profile, onDone }: { profile: Profile; onDone: () => void
 function SignOutCard() {
   const { service } = useAuth();
   const { push } = useServices();
+  const navigate = useNavigate();
   const { busy, error, run } = useSubmit();
   return (
     <div className="grid gap-2">
       <FormError message={error?.message} />
+      <Button variant="secondary" onClick={() => void navigate({ to: '/passwort-neu' })}>
+        <KeyRound aria-hidden className="size-4" /> Passwort ändern
+      </Button>
       <Button variant="secondary" disabled={busy} onClick={() => run(async () => {
           // Vorher, solange die Anmeldung noch gilt: Abo des Geräts in der Datenbank löschen.
           await push.disable();

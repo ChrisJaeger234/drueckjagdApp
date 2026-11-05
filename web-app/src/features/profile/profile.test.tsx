@@ -1,4 +1,4 @@
-import { screen } from '@testing-library/react';
+import { screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { FakeProfiles } from '../../test/fakes';
@@ -47,5 +47,18 @@ describe('Profilseite', () => {
     await userEvent.click(await screen.findByRole('button', { name: 'Abmelden' }));
     expect(await screen.findByRole('heading', { level: 1, name: 'Anmelden' })).toBeInTheDocument();
     expect(auth.calls).toContain('signOut');
+  });
+
+  it('ändert das Passwort aus dem Profil heraus', async () => {
+    const auth = signedIn();
+    const profiles = new FakeProfiles();
+    profiles.seed(auth.user!.id, { username: 'max', displayName: 'Max' });
+    renderApp('/profil', { auth, profiles });
+    await userEvent.click(await screen.findByRole('button', { name: 'Passwort ändern' }));
+    await screen.findByRole('heading', { level: 1, name: 'Neues Passwort' });
+    await userEvent.type(screen.getByLabelText('Neues Passwort'), 'waidmannsheil1');
+    await userEvent.type(screen.getByLabelText('Passwort bestätigen'), 'waidmannsheil1');
+    await userEvent.click(screen.getByRole('button', { name: 'Passwort speichern' }));
+    await waitFor(() => expect(auth.calls).toContain('updatePassword'));
   });
 });
