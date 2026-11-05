@@ -1,11 +1,11 @@
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
-import { AlertTriangle, ArrowLeft, Flag, MapPin, PencilLine, Play, ShieldAlert, Trash2, Undo2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, FileUp, Flag, MapPin, PencilLine, Play, ShieldAlert, Trash2, Undo2, X } from 'lucide-react';
 import type { Position } from 'geojson';
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Badge, Button, Card, ConfirmButton, Page } from '../../components/ui';
 import { Field, FormError, FormSuccess } from '../../components/form';
 import { mapError } from '../../lib/errors';
-import { bboxOf, polygonFromPoints } from '../../modules/map/geo';
+import { bboxOf, BoundaryImportError, featuresFromFile, polygonFromPoints } from '../../modules/map/geo';
 import type { LayerId } from '../../modules/map/layers';
 import { LazyMap } from '../../modules/map/LazyMap';
 import type { MapMarker } from '../../modules/map/MapView';
@@ -21,6 +21,8 @@ import { StatusBadge } from './HuntList';
 import { huntPermissions, isOpenFollowUp, livePermissions, ZONE_KINDS, zoneColor, type Hunt, type ZoneKind } from './huntModel';
 import { useHunt, useHuntActions, useHuntDetails, useHuntPositions } from './useHunts';
 import { LiveCard, liveMarkers } from '../live/LiveCard';
+import { huntImportFrom } from './huntImport';
+import { countText, HuntImportCard, STAND_PREVIEW_COLOR, type ImportSelection } from './HuntImportCard';
 
 const errorText = (e: unknown) => (e ? mapError(e).message : null);
 
@@ -33,7 +35,13 @@ export function HuntPage() {
   return <HuntView hunt={hunt} />;
 }
 
-type Mode = { kind: 'view' } | { kind: 'stand'; point: { lat: number; lng: number } | null } | { kind: 'zone'; points: Position[] };
+type Mode =
+  | { kind: 'view' }
+  | { kind: 'stand'; point: { lat: number; lng: number } | null }
+  | { kind: 'zone'; points: Position[] }
+  | { kind: 'import'; fileName: string; selection: ImportSelection };
+
+const IMPORT_ACCEPT = '.kml,.kmz,.gpx,.geojson,.json,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/gpx+xml,application/geo+json,application/json';
 
 function HuntView({ hunt }: { hunt: Hunt }) {
   const user = useUser();
@@ -59,6 +67,42 @@ function HuntView({ hunt }: { hunt: Hunt }) {
   const ownPos = position.status === 'ok' ? position.position : null;
   const [mode, setMode] = useState<Mode>({ kind: 'view' });
   const [notice, setNotice] = useState<string | null>(null);
+  const [importError, setImportError] = useState<string | null>(null);
+  const fileInput = useRef<HTMLInputElement>(null);
+  const importing = mode.kind === 'import' ? mode.selection : null;
+
+  async function onImportFile(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    e.target.value = '';
+    if (!file) return;
+    setNotice(null);
+    setImportError(null);
+    actions.importMap.reset();
+    try {
+      const found = huntImportFrom(await featuresFromFile(file), standList.map((s) => s.label));
+      setMode({
+        kind: 'import',
+        fileName: file.name,
+        selection: { zones: found.zones.map((z) => ({ ...z, use: true })), stands: found.stands.map((s) => ({ ...s, use: !s.duplicate })) },
+      });
+    } catch (err) {
+      setImportError(err instanceof BoundaryImportError ? err.message : 'Die Datei konnte nicht gelesen werden.');
+    }
+  }
+
+  function saveImport(sel: ImportSelection) {
+    const zones = sel.zones.filter((z) => z.use).map((z) => ({ name: z.name, kind: z.kind, geometry: z.geometry, color: z.color }));
+    const stands = sel.stands.filter((s) => s.use && !s.duplicate).map((s) => ({ label: s.label, lat: s.lat, lng: s.lng, waypointId: null, description: '' }));
+    actions.importMap.mutate(
+      { zones, stands },
+      {
+        onSuccess: () => {
+          setMode({ kind: 'view' });
+          setNotice(`${countText(zones.length, stands.length)} übernommen.`);
+        },
+      },
+    );
+  }
 
   const markers: MapMarker[] = useMemo(
     () => [
@@ -75,13 +119,25 @@ function HuntView({ hunt }: { hunt: Hunt }) {
         };
       }),
       ...(live.canView ? liveMarkers(positions, people, user.id) : []),
+      ...(importing?.stands ?? [])
+        .filter((s) => s.use && !s.duplicate)
+        .map((s) => ({ id: `import-${s.key}`, lat: s.lat, lng: s.lng, label: s.label, color: STAND_PREVIEW_COLOR, ariaLabel: `Neuer Stand ${s.label}` })),
     ],
-    [standList, people, me?.standId, live.canView, positions, user.id],
+    [standList, people, me?.standId, live.canView, positions, user.id, importing],
   );
-  const areas = useMemo(() => zoneList.map((z) => ({ id: z.id, geometry: z.geometry, color: zoneColor(z) })), [zoneList]);
+  const areas = useMemo(
+    () => [
+      ...zoneList.map((z) => ({ id: z.id, geometry: z.geometry, color: zoneColor(z) })),
+      ...(importing?.zones ?? []).filter((z) => z.use).map((z) => ({ id: `import-${z.key}`, geometry: z.geometry, color: zoneColor(z) })),
+    ],
+    [zoneList, importing],
+  );
   const fit = useMemo(
-    () => bboxOf([...boundaries.map((b) => b.geometry), ...zoneList.map((z) => z.geometry), ...standList.map((s) => [s.lng, s.lat])]),
-    [boundaries, zoneList, standList],
+    () =>
+      importing
+        ? bboxOf([...importing.zones.map((z) => z.geometry), ...importing.stands.map((s) => [s.lng, s.lat])])
+        : bboxOf([...boundaries.map((b) => b.geometry), ...zoneList.map((z) => z.geometry), ...standList.map((s) => [s.lng, s.lat])]),
+    [importing, boundaries, zoneList, standList],
   );
   const openFollowUps = reportList.filter(isOpenFollowUp);
   const myStand = standList.find((s) => s.id === me?.standId) ?? null;
@@ -92,6 +148,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
   }
   const startMode = (m: Mode) => {
     setNotice(null);
+    setImportError(null);
     setMode(m);
   };
   const draft = mode.kind === 'zone' ? mode.points : mode.kind === 'stand' && mode.point ? [[mode.point.lng, mode.point.lat]] : undefined;
@@ -164,7 +221,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
         draft={draft}
         position={ownPos}
         fit={fit}
-        fitKey={`${hunt.id}:${boundaries.length}:${zoneList.length > 0}:${standList.length > 0}`}
+        fitKey={mode.kind === 'import' ? `import:${mode.fileName}` : `${hunt.id}:${boundaries.length}:${zoneList.length > 0}:${standList.length > 0}`}
         onMapClick={onMapClick}
       />
 
@@ -231,6 +288,18 @@ function HuntView({ hunt }: { hunt: Hunt }) {
         />
       )}
 
+      {mode.kind === 'import' && (
+        <HuntImportCard
+          fileName={mode.fileName}
+          selection={mode.selection}
+          onChange={(selection) => setMode({ ...mode, selection })}
+          onSave={() => saveImport(mode.selection)}
+          onCancel={() => setMode({ kind: 'view' })}
+          pending={actions.importMap.isPending}
+          error={actions.importMap.error}
+        />
+      )}
+
       {notice && mode.kind === 'view' && <FormSuccess>{notice}</FormSuccess>}
 
       {mode.kind === 'view' && perms.canManage && (
@@ -241,8 +310,14 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           <Button variant="secondary" onClick={() => startMode({ kind: 'zone', points: [] })}>
             <PencilLine aria-hidden className="size-4" /> Zone zeichnen
           </Button>
+          <Button variant="secondary" onClick={() => fileInput.current?.click()}>
+            <FileUp aria-hidden className="size-4" /> Karte importieren
+          </Button>
         </div>
       )}
+      {mode.kind === 'view' && perms.canManage && <p className="-mt-2 text-xs text-muted">Import aus KML/KMZ (z. B. Google My Maps oder Google Earth), GPX oder GeoJSON: Flächen werden Zonen, Punkte werden Stände.</p>}
+      {mode.kind === 'view' && <FormError message={importError} />}
+      {perms.canManage && <input ref={fileInput} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={(e) => void onImportFile(e)} data-testid="hunt-import-file" />}
 
       <StandsCard stands={standList} participants={people} perms={perms} actions={actions} />
       <ZonesCard zones={zoneList} perms={perms} actions={actions} />

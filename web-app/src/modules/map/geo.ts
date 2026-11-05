@@ -51,28 +51,86 @@ export function polygonFromPoints(points: Position[]): Polygon | null {
 
 export class BoundaryImportError extends Error {}
 
+/** Liest KML, GPX oder GeoJSON (anhand der Dateiendung) als FeatureCollection. */
+export function featuresFromText(fileName: string, text: string): FeatureCollection {
+  const name = fileName.toLowerCase();
+  if (name.endsWith('.kml') || name.endsWith('.gpx')) {
+    const doc = new DOMParser().parseFromString(text, 'application/xml');
+    if (doc.getElementsByTagName('parsererror').length > 0) throw new BoundaryImportError('Die Datei ist keine gültige KML- oder GPX-Datei.');
+    return (name.endsWith('.gpx') ? gpx(doc) : kml(doc)) as FeatureCollection;
+  }
+  let json: unknown;
+  try {
+    json = JSON.parse(text);
+  } catch {
+    throw new BoundaryImportError('Die Datei ist kein gültiges GeoJSON.');
+  }
+  return toCollection(json);
+}
+
+/** Wie featuresFromText, liest zusätzlich KMZ (gezipptes KML, Standard-Export von Google My Maps). */
+export async function featuresFromFile(file: Pick<File, 'name' | 'text' | 'arrayBuffer'>): Promise<FeatureCollection> {
+  if (!file.name.toLowerCase().endsWith('.kmz')) return featuresFromText(file.name, await file.text());
+  const kmlText = await kmlFromKmz(new Uint8Array(await file.arrayBuffer()));
+  return featuresFromText('doc.kml', kmlText);
+}
+
+const streamOf = (data: Uint8Array<ArrayBuffer>) =>
+  new ReadableStream<BufferSource>({
+    start(c) {
+      c.enqueue(data);
+      c.close();
+    },
+  });
+
+/** Erste .kml-Datei aus einem KMZ-Archiv (ZIP, gespeichert oder Deflate). */
+export async function kmlFromKmz(bytes: Uint8Array): Promise<string> {
+  const broken = () => new BoundaryImportError('Die KMZ-Datei konnte nicht gelesen werden. Exportiere die Karte bitte als KML.');
+  const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+  let eocd = -1;
+  for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 22 - 65535); i--) {
+    if (view.getUint32(i, true) === 0x06054b50) {
+      eocd = i;
+      break;
+    }
+  }
+  if (eocd < 0) throw broken();
+  const entries = view.getUint16(eocd + 10, true);
+  let p = view.getUint32(eocd + 16, true);
+  const decoder = new TextDecoder();
+  for (let n = 0; n < entries; n++) {
+    if (p + 46 > bytes.length || view.getUint32(p, true) !== 0x02014b50) throw broken();
+    const method = view.getUint16(p + 10, true);
+    const size = view.getUint32(p + 20, true);
+    const nameLen = view.getUint16(p + 28, true);
+    const extraLen = view.getUint16(p + 30, true);
+    const commentLen = view.getUint16(p + 32, true);
+    const local = view.getUint32(p + 42, true);
+    const entryName = decoder.decode(bytes.subarray(p + 46, p + 46 + nameLen));
+    p += 46 + nameLen + extraLen + commentLen;
+    if (!entryName.toLowerCase().endsWith('.kml')) continue;
+    if (view.getUint32(local, true) !== 0x04034b50) throw broken();
+    const start = local + 30 + view.getUint16(local + 26, true) + view.getUint16(local + 28, true);
+    const data = bytes.slice(start, start + size);
+    if (method === 0) return decoder.decode(data);
+    if (method !== 8 || typeof DecompressionStream === 'undefined') throw broken();
+    try {
+      const stream = streamOf(data).pipeThrough(new DecompressionStream('deflate-raw'));
+      return await new Response(stream).text();
+    } catch {
+      throw broken();
+    }
+  }
+  throw new BoundaryImportError('In der KMZ-Datei ist keine KML-Datei enthalten.');
+}
+
 /**
  * Liest eine Reviergrenze aus GeoJSON, KML oder GPX. Polygone werden übernommen, geschlossene
  * oder offene Linien (z. B. ein abgelaufener GPX-Track) werden zu einem Polygon geschlossen.
  * Die endgültige Prüfung und Reparatur übernimmt die Datenbank (Migration 0009).
  */
 export function parseBoundaryFile(fileName: string, text: string): MultiPolygon {
-  const name = fileName.toLowerCase();
-  let fc: FeatureCollection;
-  if (name.endsWith('.kml') || name.endsWith('.gpx')) {
-    const doc = new DOMParser().parseFromString(text, 'application/xml');
-    if (doc.getElementsByTagName('parsererror').length > 0) throw new BoundaryImportError('Die Datei ist keine gültige KML- oder GPX-Datei.');
-    fc = (name.endsWith('.gpx') ? gpx(doc) : kml(doc)) as FeatureCollection;
-  } else {
-    let json: unknown;
-    try {
-      json = JSON.parse(text);
-    } catch {
-      throw new BoundaryImportError('Die Datei ist kein gültiges GeoJSON.');
-    }
-    fc = toCollection(json);
-  }
-
+  const fc = featuresFromText(fileName, text);
   const polygons: Position[][][] = [];
   const add = (g: Geometry | null) => {
     if (!g) return;

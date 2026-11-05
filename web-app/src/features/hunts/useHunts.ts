@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useServices } from '../../app/services';
 import { REPORT_MUTATION_KEY, type ReportVariables } from '../../lib/offline';
-import type { Boundary } from '../reviere/revierModel';
-import type { HuntDraft, HuntRole, HuntStatus, StandInput, ZoneKind } from './huntModel';
+import { AppError, mapError } from '../../lib/errors';
+import type { HuntDraft, HuntRole, HuntStatus, StandInput, ZoneInput } from './huntModel';
 
 export const huntKeys = {
   root: ['hunts'] as const,
@@ -58,7 +58,28 @@ export function useHuntActions(huntId: string) {
       m(({ id, ...patch }: { id: string; role?: HuntRole; note?: string; standId?: string | null; zoneId?: string | null }) => hunts.updateParticipant(id, patch)),
     ),
     removeParticipant: useMutation(m((participantId: string) => hunts.removeParticipant(participantId))),
-    createZone: useMutation(m((input: { name: string; kind: ZoneKind; geometry: Boundary }) => hunts.createZone(huntId, input))),
+    createZone: useMutation(m((input: ZoneInput) => hunts.createZone(huntId, input))),
+    /** Karten-Import: Zonen und Stände nacheinander anlegen. */
+    importMap: useMutation(
+      m(async ({ zones, stands }: { zones: ZoneInput[]; stands: StandInput[] }) => {
+        const total = zones.length + stands.length;
+        let done = 0;
+        try {
+          for (const z of zones) {
+            await hunts.createZone(huntId, z);
+            done++;
+          }
+          for (const s of stands) {
+            await hunts.createStand(huntId, s);
+            done++;
+          }
+        } catch (e) {
+          if (done === 0) throw e;
+          throw new AppError(`${done} von ${total} Einträgen wurden gespeichert, dann: ${mapError(e).message}`, mapError(e).kind, e);
+        }
+        return { zones: zones.length, stands: stands.length };
+      }),
+    ),
     removeZone: useMutation(m((zoneId: string) => hunts.removeZone(zoneId))),
     createStand: useMutation(m((input: StandInput) => hunts.createStand(huntId, input))),
     updateStand: useMutation(m(({ id, input }: { id: string; input: StandInput }) => hunts.updateStand(id, input))),
