@@ -132,6 +132,22 @@ check(await visible(reports.getByText('Angeschossen: Schwarzwild')), 'Jagdleitun
 check(await visible(reports.getByText(/Stand 1 · Schuetze/)), 'Meldung mit Stand und Melder');
 await reports.getByRole('button', { name: 'Erledigt' }).click();
 check(await visible(reports.getByText('Nachsuche erledigt')), 'Nachsuche als erledigt markiert (resolved_by per Trigger)');
+// Phasen (Migration 0016): Phase 2 vorausplanen, umschalten, Schütze sieht seinen neuen Stand.
+await lead.getByRole('button', { name: 'Phasen nutzen' }).click();
+check(await visible(lead.getByText('Aktiv: Phase 1 (1 von 1)')), 'Phase 1 angelegt und aktiv');
+await lead.getByRole('button', { name: 'Phase hinzufügen' }).click();
+await lead.getByLabel('Stand von Schuetze in Phase 2').selectOption({ label: 'DJB #10' });
+await lead.waitForTimeout(500);
+await lead.getByRole('button', { name: 'Weiter zu Phase 2' }).click();
+check(await visible(lead.getByText('Aktiv: Phase 2 (2 von 2)')), 'Auf Phase 2 umgeschaltet (RPC activate_hunt_phase)');
+await shooter.reload();
+check(await visible(shooter.getByText('Dein Stand: DJB #10')), 'Schütze sieht seinen Stand in Phase 2');
+check(await visible(shooter.getByText('Aktiv: Phase 2 (2 von 2)')), 'Schütze sieht die aktive Phase');
+await lead.getByRole('list', { name: 'Phasen' }).getByRole('button', { name: 'Aktivieren' }).click();
+check(await visible(lead.getByText('Aktiv: Phase 1 (1 von 2)')), 'Zurück zu Phase 1');
+await shooter.reload();
+check(await visible(shooter.getByText('Dein Stand: Stand 1')), 'Schütze wieder auf Stand 1');
+
 await lead.getByRole('button', { name: 'Jagd beenden' }).click();
 check(await visible(lead.getByRole('button', { name: 'Wieder öffnen' })), 'Jagd beendet');
 if (shot) await lead.screenshot({ path: `${shot}/jagd-leitung.png`, fullPage: true });

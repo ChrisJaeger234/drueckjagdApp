@@ -17,6 +17,7 @@ import { MapToolbar } from '../reviere/mapControls';
 import { useBoundaries, useWaypoints } from '../reviere/useReviere';
 import { categoryColor, type Waypoint, type WaypointCategory } from '../reviere/revierModel';
 import { HuntSummaryCard } from './HuntSummary';
+import { PhasesCard } from './PhasesCard';
 import { RevierWaypointsCard, StandCategorySelect, StandFromWaypointCard } from './StandFromWaypoint';
 import { formatHuntTime } from './format';
 import { ParticipantsCard, ReportsCard, StandsCard, ZonesCard, MyParticipation, ReportButtons } from './huntSections';
@@ -50,7 +51,7 @@ const IMPORT_ACCEPT = '.kml,.kmz,.gpx,.geojson,.json,application/vnd.google-eart
 function HuntView({ hunt }: { hunt: Hunt }) {
   const user = useUser();
   const { data: mine } = useMyGroup(hunt.groupId);
-  const { participants, stands, zones, reports } = useHuntDetails(hunt.id);
+  const { participants, stands, zones, reports, phases, assignments } = useHuntDetails(hunt.id);
   const actions = useHuntActions(hunt.id);
   const navigate = useNavigate();
   const revierIds = useMemo(() => (hunt.revierId ? [hunt.revierId] : []), [hunt.revierId]);
@@ -356,6 +357,16 @@ function HuntView({ hunt }: { hunt: Hunt }) {
       {mode.kind === 'view' && <FormError message={importError} />}
       {perms.canManage && <input ref={fileInput} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={(e) => void onImportFile(e)} data-testid="hunt-import-file" />}
 
+      <PhasesCard
+        hunt={hunt}
+        phases={phases.data ?? []}
+        assignments={assignments.data ?? []}
+        participants={people}
+        stands={standList}
+        zones={zoneList}
+        perms={perms}
+        actions={actions}
+      />
       <StandsCard stands={standList} participants={people} perms={perms} actions={actions} />
       {perms.canManage && mode.kind === 'view' && <RevierWaypointsCard waypoints={freeWaypoints} onPick={(w) => startMode({ kind: 'adopt', waypoint: w })} />}
       <ZonesCard zones={zoneList} perms={perms} actions={actions} />
