@@ -4,6 +4,7 @@ import { FormError } from '../../components/form';
 import { mapError } from '../../lib/errors';
 import { ZONE_KINDS, zoneColor, type ZoneKind } from './huntModel';
 import type { ImportStand, ImportZone } from './huntImport';
+import { WAYPOINT_CATEGORIES, type WaypointCategory } from '../reviere/revierModel';
 
 export type ImportSelection = {
   zones: (ImportZone & { use: boolean })[];
@@ -39,7 +40,7 @@ export function HuntImportCard({
   const zoneCount = zones.filter((z) => z.use).length;
   const standCount = stands.filter((s) => s.use && !s.duplicate).length;
   const setZone = (key: string, patch: Partial<ImportSelection['zones'][number]>) => onChange({ ...selection, zones: zones.map((z) => (z.key === key ? { ...z, ...patch } : z)) });
-  const setStand = (key: string, use: boolean) => onChange({ ...selection, stands: stands.map((s) => (s.key === key ? { ...s, use } : s)) });
+  const setStand = (key: string, patch: Partial<ImportSelection['stands'][number]>) => onChange({ ...selection, stands: stands.map((s) => (s.key === key ? { ...s, ...patch } : s)) });
   const allStands = (use: boolean) => onChange({ ...selection, stands: stands.map((s) => ({ ...s, use })) });
 
   return (
@@ -92,17 +93,33 @@ export function HuntImportCard({
           </div>
           <ul className="grid gap-1" aria-label="Stände aus der Datei">
             {stands.map((s) => (
-              <li key={s.key}>
-                <label className="flex min-h-11 items-center gap-2 text-sm">
-                  <input type="checkbox" className={check} checked={s.use && !s.duplicate} disabled={s.duplicate} onChange={(e) => setStand(s.key, e.target.checked)} />
+              <li key={s.key} className="flex flex-wrap items-center gap-2">
+                <label className="flex min-h-11 flex-1 items-center gap-2 text-sm">
+                  <input type="checkbox" className={check} checked={s.use && !s.duplicate} disabled={s.duplicate} onChange={(e) => setStand(s.key, { use: e.target.checked })} />
                   <span className="size-3 shrink-0 rounded-full" style={{ background: STAND_PREVIEW_COLOR }} />
                   <span className={s.duplicate ? 'text-muted line-through' : 'font-medium'}>{s.label}</span>
                   {s.duplicate && <Badge>gibt es schon</Badge>}
                 </label>
+                {!s.duplicate && (
+                  <select
+                    aria-label={`Art von ${s.label}`}
+                    value={s.category ?? ''}
+                    disabled={!s.use}
+                    onChange={(e) => setStand(s.key, { category: (e.target.value || null) as WaypointCategory | null })}
+                    className={select}
+                  >
+                    <option value="">Stand</option>
+                    {WAYPOINT_CATEGORIES.map(([k, l]) => (
+                      <option key={k} value={k}>
+                        {l}
+                      </option>
+                    ))}
+                  </select>
+                )}
               </li>
             ))}
           </ul>
-          <p className="text-xs text-muted">Treffpunkte und Startpunkte kannst du ebenfalls als Stand übernehmen, dann stehen sie mit Namen in der Karte. Schützen teilst du danach wie gewohnt zu.</p>
+          <p className="text-xs text-muted">Die Art ist aus dem Namen geraten (z. B. „Treffpunkt“ → Sammelplatz) und lässt sich ändern. Personen teilst du danach wie gewohnt zu.</p>
         </section>
       )}
 

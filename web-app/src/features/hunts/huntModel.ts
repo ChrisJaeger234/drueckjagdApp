@@ -1,6 +1,6 @@
 // Port von lib/features/hunts/domain der Flutter-App (Migration 0010).
 import type { GroupRole } from '../groups/groupModel';
-import type { Boundary } from '../reviere/revierModel';
+import { parseCategory, type Boundary, type WaypointCategory } from '../reviere/revierModel';
 
 // ------------------------------------------------------------ Aufzählungen
 
@@ -213,6 +213,8 @@ export interface Stand {
   huntId: string;
   label: string;
   waypointId: string | null;
+  /** Art (wie bei Einrichtungen), null = Stand ohne Angabe. Migration 0015. */
+  category: WaypointCategory | null;
   zoneId: string | null;
   lat: number;
   lng: number;
@@ -220,13 +222,14 @@ export interface Stand {
   sortOrder: number;
 }
 
-export const STAND_COLUMNS = 'id, hunt_id, label, waypoint_id, zone_id, latitude, longitude, description, sort_order';
+export const STAND_COLUMNS = 'id, hunt_id, label, waypoint_id, category, zone_id, latitude, longitude, description, sort_order';
 
 export interface StandRow {
   id: string;
   hunt_id: string;
   label: string;
   waypoint_id: string | null;
+  category?: string | null;
   zone_id: string | null;
   latitude: number;
   longitude: number;
@@ -239,6 +242,7 @@ export const standFromRow = (r: StandRow): Stand => ({
   huntId: r.hunt_id,
   label: r.label,
   waypointId: r.waypoint_id,
+  category: r.category ? parseCategory(r.category) : null,
   zoneId: r.zone_id,
   lat: r.latitude,
   lng: r.longitude,
@@ -255,6 +259,8 @@ export interface StandInput {
   lat: number;
   lng: number;
   waypointId: string | null;
+  /** Fehlt = unverändert lassen (bzw. beim Anlegen: ohne Art). */
+  category?: WaypointCategory | null;
   description: string;
 }
 

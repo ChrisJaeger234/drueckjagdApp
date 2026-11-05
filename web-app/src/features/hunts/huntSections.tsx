@@ -29,6 +29,7 @@ import {
   type Zone,
 } from './huntModel';
 import type { HuntActions } from './useHunts';
+import { CATEGORY_LABEL } from '../reviere/revierModel';
 
 const errorText = (e: unknown) => (e ? mapError(e).message : null);
 const select = 'min-h-10 rounded-xl border border-line bg-surface px-2 text-sm';
@@ -286,6 +287,7 @@ export function StandsCard({ stands, participants, perms, actions }: { stands: S
             return (
               <li key={s.id} className="flex flex-wrap items-center gap-2 border-b border-line pb-2 last:border-0 last:pb-0">
                 <span className="min-w-20 font-medium">{s.label}</span>
+                {s.category && <Badge>{CATEGORY_LABEL[s.category]}</Badge>}
                 {perms.canManage ? (
                   <select
                     aria-label={`Schütze für ${s.label}`}

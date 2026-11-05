@@ -366,7 +366,7 @@ export class FakeHunts implements HuntsService {
     this.participantList.push({ id: `p${++this.seq}`, huntId, userId, role, standId, zoneId: null, note: '', name: this.name(userId) });
   }
   seedStand(huntId: string, label: string) {
-    const s: Stand = { id: `s${++this.seq}`, huntId, label, waypointId: null, zoneId: null, lat: 51.17, lng: 7.25, description: '', sortOrder: 0 };
+    const s: Stand = { id: `s${++this.seq}`, huntId, label, waypointId: null, category: null, zoneId: null, lat: 51.17, lng: 7.25, description: '', sortOrder: 0 };
     this.standList.push(s);
     return s.id;
   }
@@ -450,7 +450,7 @@ export class FakeHunts implements HuntsService {
       throw new AppError('In dieser Jagd gibt es bereits einen Stand mit dieser Bezeichnung.', 'conflict');
     }
     const id = this.seedStand(huntId, input.label.trim());
-    return Object.assign(this.standList.find((s) => s.id === id)!, { lat: input.lat, lng: input.lng });
+    return Object.assign(this.standList.find((s) => s.id === id)!, { lat: input.lat, lng: input.lng, waypointId: input.waypointId, category: input.category ?? null });
   }
   async updateStand(standId: string, input: StandInput) {
     Object.assign(this.standList.find((s) => s.id === standId)!, input);

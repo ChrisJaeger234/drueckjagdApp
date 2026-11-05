@@ -3,6 +3,7 @@
 import type { Feature, FeatureCollection, Geometry, MultiPolygon, Polygon, Position } from 'geojson';
 import { BoundaryImportError, bboxOf, type Bbox } from '../../modules/map/geo';
 import type { ZoneKind } from './huntModel';
+import type { WaypointCategory } from '../reviere/revierModel';
 
 export interface ImportZone {
   key: string;
@@ -18,6 +19,8 @@ export interface ImportStand {
   label: string;
   lat: number;
   lng: number;
+  /** Aus dem Namen geraten (z. B. „Treffpunkt“ → Sammelplatz), null = Stand. */
+  category: WaypointCategory | null;
   /** Gibt es in der Jagd (oder weiter oben in der Datei) schon. */
   duplicate: boolean;
 }
@@ -51,6 +54,19 @@ export function guessZoneKind(name: string): ZoneKind {
   if (/sammel|treffpunkt|parkplatz|streckenplatz/.test(n)) return 'sammelplatz';
   if (/karte|revier|grenze|gesamt|übersicht|uebersicht/.test(n)) return 'sonstiges';
   return 'treiben';
+}
+
+/** Art eines Punktes aus dem Namen raten; null = einfacher Stand. */
+export function guessPointCategory(name: string): WaypointCategory | null {
+  const n = name.toLowerCase();
+  if (/treffpunkt|sammel|streckenplatz|strecke legen/.test(n)) return 'sammelplatz';
+  if (/parkplatz|parken/.test(n)) return 'parkplatz';
+  if (/kanzel/.test(n)) return 'kanzel';
+  if (/\bdjb\b|drückjagdbock|drueckjagdbock|\bbock\b/.test(n)) return 'drueckjagdbock';
+  if (/leiter/.test(n)) return 'ansitzleiter';
+  if (/hochsitz|\bhs\b/.test(n)) return 'hochsitz';
+  if (/gefahr|achtung|vorsicht/.test(n)) return 'gefahr';
+  return null;
 }
 
 const contains = (outer: Bbox, inner: Bbox) => outer.west <= inner.west && outer.east >= inner.east && outer.south <= inner.south && outer.north >= inner.north;
@@ -88,7 +104,7 @@ export function huntImportFrom(fc: FeatureCollection, existingStandLabels: strin
         const label = cut(name || `Stand ${stands.length + 1}`, MAX_STAND_LABEL);
         const duplicate = taken.has(label.toLowerCase());
         taken.add(label.toLowerCase());
-        stands.push({ key: `s${i}`, label, lat: round(lat), lng: round(lng), duplicate });
+        stands.push({ key: `s${i}`, label, lat: round(lat), lng: round(lng), category: guessPointCategory(label), duplicate });
         return;
       }
       case 'MultiPoint':
