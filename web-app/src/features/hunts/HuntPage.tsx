@@ -14,7 +14,10 @@ import { useUser } from '../auth/AuthContext';
 import { useMyGroup } from '../groups/useGroups';
 import { OfflineMapHint } from '../offlineMaps/OfflineMapHint';
 import { MapToolbar } from '../reviere/mapControls';
-import { useBoundaries } from '../reviere/useReviere';
+import { useBoundaries, useWaypoints } from '../reviere/useReviere';
+import { categoryColor, type Waypoint, type WaypointCategory } from '../reviere/revierModel';
+import { HuntSummaryCard } from './HuntSummary';
+import { RevierWaypointsCard, StandCategorySelect, StandFromWaypointCard } from './StandFromWaypoint';
 import { formatHuntTime } from './format';
 import { ParticipantsCard, ReportsCard, StandsCard, ZonesCard, MyParticipation, ReportButtons } from './huntSections';
 import { StatusBadge } from './HuntList';
@@ -39,7 +42,8 @@ type Mode =
   | { kind: 'view' }
   | { kind: 'stand'; point: { lat: number; lng: number } | null }
   | { kind: 'zone'; points: Position[] }
-  | { kind: 'import'; fileName: string; selection: ImportSelection };
+  | { kind: 'import'; fileName: string; selection: ImportSelection }
+  | { kind: 'adopt'; waypoint: Waypoint };
 
 const IMPORT_ACCEPT = '.kml,.kmz,.gpx,.geojson,.json,application/vnd.google-earth.kml+xml,application/vnd.google-earth.kmz,application/gpx+xml,application/geo+json,application/json';
 
@@ -51,6 +55,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
   const navigate = useNavigate();
   const revierIds = useMemo(() => (hunt.revierId ? [hunt.revierId] : []), [hunt.revierId]);
   const { data: boundaries = [] } = useBoundaries(revierIds);
+  const { data: revierWaypoints = [] } = useWaypoints(revierIds);
 
   const people = useMemo(() => participants.data ?? [], [participants.data]);
   const standList = useMemo(() => stands.data ?? [], [stands.data]);
@@ -92,7 +97,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
 
   function saveImport(sel: ImportSelection) {
     const zones = sel.zones.filter((z) => z.use).map((z) => ({ name: z.name, kind: z.kind, geometry: z.geometry, color: z.color }));
-    const stands = sel.stands.filter((s) => s.use && !s.duplicate).map((s) => ({ label: s.label, lat: s.lat, lng: s.lng, waypointId: null, description: '' }));
+    const stands = sel.stands.filter((s) => s.use && !s.duplicate).map((s) => ({ label: s.label, lat: s.lat, lng: s.lng, waypointId: null, category: s.category, description: '' }));
     actions.importMap.mutate(
       { zones, stands },
       {
@@ -104,6 +109,8 @@ function HuntView({ hunt }: { hunt: Hunt }) {
     );
   }
 
+  // Einrichtungen des Reviers, die in dieser Jagd noch kein Stand sind.
+  const freeWaypoints = useMemo(() => revierWaypoints.filter((w) => !standList.some((s) => s.waypointId === w.id)), [revierWaypoints, standList]);
   const markers: MapMarker[] = useMemo(
     () => [
       ...standList.map((s) => {
@@ -113,17 +120,18 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           lat: s.lat,
           lng: s.lng,
           label: names.length ? `${s.label} · ${names.join(', ')}` : s.label,
-          color: '#7a4a1f',
+          color: s.category ? categoryColor(s.category) : '#7a4a1f',
           ariaLabel: `Stand ${s.label}`,
           highlight: me?.standId === s.id,
         };
       }),
+      ...freeWaypoints.map((w) => ({ id: `wp:${w.id}`, lat: w.lat, lng: w.lng, label: w.name, color: '#9e9e9e', ariaLabel: `Einrichtung ${w.name}` })),
       ...(live.canView ? liveMarkers(positions, people, user.id) : []),
       ...(importing?.stands ?? [])
         .filter((s) => s.use && !s.duplicate)
         .map((s) => ({ id: `import-${s.key}`, lat: s.lat, lng: s.lng, label: s.label, color: STAND_PREVIEW_COLOR, ariaLabel: `Neuer Stand ${s.label}` })),
     ],
-    [standList, people, me?.standId, live.canView, positions, user.id, importing],
+    [standList, people, me?.standId, live.canView, positions, user.id, importing, freeWaypoints],
   );
   const areas = useMemo(
     () => [
@@ -146,7 +154,24 @@ function HuntView({ hunt }: { hunt: Hunt }) {
     if (mode.kind === 'stand') setMode({ kind: 'stand', point: { lat, lng } });
     else if (mode.kind === 'zone') setMode({ kind: 'zone', points: [...mode.points, [lng, lat]] });
   }
+  function onMarkerClick(id: string) {
+    if (!perms.canManage || (mode.kind !== 'view' && mode.kind !== 'adopt') || !id.startsWith('wp:')) return;
+    const waypoint = freeWaypoints.find((w) => `wp:${w.id}` === id);
+    if (waypoint) startMode({ kind: 'adopt', waypoint });
+  }
+  function adopt(waypoint: Waypoint, label: string, category: WaypointCategory | null) {
+    actions.createStand.mutate(
+      { label, lat: waypoint.lat, lng: waypoint.lng, waypointId: waypoint.id, category, description: '' },
+      {
+        onSuccess: () => {
+          setMode({ kind: 'view' });
+          setNotice(`${label} als Stand übernommen.`);
+        },
+      },
+    );
+  }
   const startMode = (m: Mode) => {
+    actions.createStand.reset();
     setNotice(null);
     setImportError(null);
     setMode(m);
@@ -223,6 +248,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
         fit={fit}
         fitKey={mode.kind === 'import' ? `import:${mode.fileName}` : `${hunt.id}:${boundaries.length}:${zoneList.length > 0}:${standList.length > 0}`}
         onMapClick={onMapClick}
+        onMarkerClick={onMarkerClick}
       />
 
       {mode.kind === 'stand' && (
@@ -235,9 +261,9 @@ function HuntView({ hunt }: { hunt: Hunt }) {
               pending={actions.createStand.isPending}
               error={actions.createStand.error}
               onCancel={() => setMode({ kind: 'view' })}
-              onSubmit={(label) =>
+              onSubmit={(label, category) =>
                 actions.createStand.mutate(
-                  { label, lat: mode.point!.lat, lng: mode.point!.lng, waypointId: null, description: '' },
+                  { label, lat: mode.point!.lat, lng: mode.point!.lng, waypointId: null, category, description: '' },
                   {
                     onSuccess: () => {
                       setMode({ kind: 'view' });
@@ -288,6 +314,17 @@ function HuntView({ hunt }: { hunt: Hunt }) {
         />
       )}
 
+      {mode.kind === 'adopt' && (
+        <StandFromWaypointCard
+          key={mode.waypoint.id}
+          waypoint={mode.waypoint}
+          pending={actions.createStand.isPending}
+          error={actions.createStand.error}
+          onSave={(label, category) => adopt(mode.waypoint, label, category)}
+          onCancel={() => setMode({ kind: 'view' })}
+        />
+      )}
+
       {mode.kind === 'import' && (
         <HuntImportCard
           fileName={mode.fileName}
@@ -320,8 +357,12 @@ function HuntView({ hunt }: { hunt: Hunt }) {
       {perms.canManage && <input ref={fileInput} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={(e) => void onImportFile(e)} data-testid="hunt-import-file" />}
 
       <StandsCard stands={standList} participants={people} perms={perms} actions={actions} />
+      {perms.canManage && mode.kind === 'view' && <RevierWaypointsCard waypoints={freeWaypoints} onPick={(w) => startMode({ kind: 'adopt', waypoint: w })} />}
       <ZonesCard zones={zoneList} perms={perms} actions={actions} />
       <ParticipantsCard hunt={hunt} participants={people} stands={standList} zones={zoneList} perms={perms} actions={actions} userId={user.id} />
+      {perms.canManage && (hunt.status === 'laufend' || hunt.status === 'beendet') && (
+        <HuntSummaryCard hunt={hunt} reports={reportList} participants={people} stands={standList} />
+      )}
       <ReportsCard reports={reportList} stands={standList} perms={perms} actions={actions} />
 
       {perms.canManage && (
@@ -390,8 +431,21 @@ function Info({ label, text }: { label: string; text: string }) {
   );
 }
 
-function StandForm({ suggested, pending, error, onSubmit, onCancel }: { suggested: string; pending: boolean; error: unknown; onSubmit: (label: string) => void; onCancel: () => void }) {
+function StandForm({
+  suggested,
+  pending,
+  error,
+  onSubmit,
+  onCancel,
+}: {
+  suggested: string;
+  pending: boolean;
+  error: unknown;
+  onSubmit: (label: string, category: WaypointCategory | null) => void;
+  onCancel: () => void;
+}) {
   const [label, setLabel] = useState(suggested);
+  const [category, setCategory] = useState<WaypointCategory | null>(null);
   const invalid = label.trim().length === 0 || label.trim().length > 60;
   return (
     <form
@@ -399,10 +453,11 @@ function StandForm({ suggested, pending, error, onSubmit, onCancel }: { suggeste
       className="grid gap-3"
       onSubmit={(e) => {
         e.preventDefault();
-        if (!invalid) onSubmit(label);
+        if (!invalid) onSubmit(label, category);
       }}
     >
       <Field label="Bezeichnung" value={label} onChange={(e) => setLabel(e.target.value)} error={invalid ? 'Bitte gib eine Bezeichnung mit bis zu 60 Zeichen ein.' : undefined} />
+      <StandCategorySelect value={category} onChange={setCategory} />
       <FormError message={errorText(error)} />
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={pending || invalid}>

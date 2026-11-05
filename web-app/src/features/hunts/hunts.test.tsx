@@ -23,7 +23,7 @@ describe('Jagdregeln', () => {
   });
 
   it('sortiert Stände natürlich', () => {
-    const s = (label: string): Stand => ({ id: label, huntId: 'h', label, waypointId: null, zoneId: null, lat: 0, lng: 0, description: '', sortOrder: 0 });
+    const s = (label: string): Stand => ({ id: label, huntId: 'h', label, waypointId: null, category: null, zoneId: null, lat: 0, lng: 0, description: '', sortOrder: 0 });
     expect(sortStands([s('Stand 10'), s('Stand 2'), s('Stand 1')]).map((x) => x.label)).toEqual(['Stand 1', 'Stand 2', 'Stand 10']);
   });
 

@@ -84,6 +84,8 @@ const standRow = (s: StandInput) => ({
   latitude: s.lat,
   longitude: s.lng,
   waypoint_id: s.waypointId,
+  // Spalte erst ab Migration 0015; ohne Art nicht mitschicken.
+  ...(s.category !== undefined ? { category: s.category } : {}),
   description: s.description.trim(),
 });
 
