@@ -5,6 +5,16 @@ Phase 1). Sie nutzt dasselbe Supabase-Projekt wie die Flutter-App: gleiche Konte
 RLS-Regeln und Migrationen unter `../supabase/`. Die Flutter-App bleibt bis zum Umschalten
 unverändert die Rückfallebene.
 
+## Stand Phase 11 (eigene Domain)
+
+- Ziel: `https://www.revier-fuenfzehnhoefe.de/` (App im Wurzelverzeichnis).
+- Umschalten über die Repository-Variable `APP_DOMAIN` (Pages-Workflow): ohne sie bleibt alles
+  unter `/drueckjagdApp/app/`, mit ihr liegt die App unter `/`. Alte Links auf `/app/…` öffnen
+  weiter die richtige Seite; ein unter `/app/` installierter Service Worker meldet sich ab.
+- Alte Installationen unter github.io zeigen einen Hinweis auf die neue Adresse
+  (`VITE_NEW_HOME`). Anmeldung, Offline-Daten und Benachrichtigungen hängen an der Adresse und
+  müssen unter der neuen Domain einmal neu eingerichtet werden.
+
 ## Stand Phase 10 (Sicherheit)
 
 - Kartenbibliothek MapLibre auf Version 6 (kritische XSS-Lücke in Version 5). Der Karten-Worker
@@ -187,4 +197,4 @@ selbst eintragen, Stand setzen und zuteilen, Treiben, Meldung und Nachsuche) sow
 `.github/workflows/pages.yml` veröffentlicht bei Änderungen in `main` unter
 `https://chrisjaeger234.github.io/drueckjagdApp/app/`. Die Supabase-Werte kommen aus den
 Repository-Variablen `VITE_SUPABASE_URL` und `VITE_SUPABASE_PUBLISHABLE_KEY`
-(bzw. `VITE_SUPABASE_ANON_KEY`). Die eigene Domain folgt in Phase 11.
+(bzw. `VITE_SUPABASE_ANON_KEY`). Zur eigenen Domain siehe Phase 11 oben.

@@ -5,6 +5,11 @@
 # Supabase-Werte kommen aus Repository-Variablen (Settings → Secrets and variables →
 # Actions → Variables): VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY bzw.
 # VITE_SUPABASE_ANON_KEY. Nur öffentliche Schlüssel, niemals den Service-Role-Key.
+#
+# Eigene Domain (Phase 11): Sobald die Repository-Variable APP_DOMAIN gesetzt ist (z. B.
+# www.revier-fuenfzehnhoefe.de), liegt die App im Wurzelverzeichnis der Domain; alte Links auf
+# /app/… landen ebenfalls in der App. Ohne APP_DOMAIN bleibt alles wie bisher (/app/), und alte
+# Installationen zeigen einen Hinweis auf die neue Adresse.
 name: GitHub Pages
 
 on:
@@ -39,6 +44,7 @@ jobs:
             web-app/package-lock.json
 
       - name: PWA-Test bauen
+        if: ${{ vars.APP_DOMAIN == '' }}
         working-directory: spikes/pwa-test
         run: npm ci && npm test && npm run build
         env:
@@ -48,12 +54,15 @@ jobs:
         working-directory: web-app
         run: npm ci && npm test && npm run build
         env:
-          BASE_PATH: /${{ github.event.repository.name }}/app/
+          BASE_PATH: ${{ vars.APP_DOMAIN != '' && '/' || format('/{0}/app/', github.event.repository.name) }}
+          # Neue Adresse für den Hinweis in alten Installationen (nur unter der alten Adresse sichtbar).
+          VITE_NEW_HOME: https://www.revier-fuenfzehnhoefe.de/
           VITE_SUPABASE_URL: ${{ vars.VITE_SUPABASE_URL }}
           VITE_SUPABASE_PUBLISHABLE_KEY: ${{ vars.VITE_SUPABASE_PUBLISHABLE_KEY }}
           VITE_SUPABASE_ANON_KEY: ${{ vars.VITE_SUPABASE_ANON_KEY }}
 
-      - name: Seiten zusammenführen
+      - name: Seiten zusammenführen (alte Adresse)
+        if: ${{ vars.APP_DOMAIN == '' }}
         run: |
           mkdir -p site
           cp -r spikes/pwa-test/dist/. site/
@@ -62,6 +71,18 @@ jobs:
           # GitHub Pages liefert für unbekannte Pfade 404.html aus: so öffnen auch
           # direkt aufgerufene Unterseiten wie /app/karte die Web-App.
           cp web-app/dist/index.html site/404.html
+
+      - name: Seiten zusammenführen (eigene Domain)
+        if: ${{ vars.APP_DOMAIN != '' }}
+        run: |
+          mkdir -p site/app
+          cp -r web-app/dist/. site/
+          # Unbekannte Pfade und alte Links auf /app/… öffnen die App (sie entfernt /app selbst).
+          cp web-app/dist/index.html site/404.html
+          cp web-app/dist/index.html site/app/index.html
+          # Ein Service Worker, der unter /app/ installiert war, meldet sich ab.
+          cp web-app/legacy/retire-sw.js site/app/sw.js
+          echo "${{ vars.APP_DOMAIN }}" > site/CNAME
 
       - uses: actions/upload-pages-artifact@v3
         with:
