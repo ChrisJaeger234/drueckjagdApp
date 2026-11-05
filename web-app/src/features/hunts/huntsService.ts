@@ -1,6 +1,15 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 import { AppError, check, guard, unwrap } from '../../lib/errors';
 import {
+  ASSIGNMENT_COLUMNS,
+  PHASE_COLUMNS,
+  assignmentFromRow,
+  phaseFromRow,
+  sortPhases,
+  type AssignmentRow,
+  type Phase,
+  type PhaseAssignment,
+  type PhaseRow,
   HUNT_COLUMNS,
   PARTICIPANT_COLUMNS,
   POSITION_COLUMNS,
@@ -72,6 +81,15 @@ export interface HuntsService {
   positions(huntId: string): Promise<LivePosition[]>;
   sharePosition(huntId: string, pos: { lat: number; lng: number; accuracy: number | null }): Promise<void>;
   stopSharing(huntId: string): Promise<void>;
+
+  /** Phasen und ihre Zuteilung (Migration 0016). */
+  phases(huntId: string): Promise<Phase[]>;
+  assignments(huntId: string): Promise<PhaseAssignment[]>;
+  createPhase(huntId: string, input: { name: string; sortOrder: number }): Promise<Phase>;
+  removePhase(phaseId: string): Promise<void>;
+  /** Schaltet die Phase aktiv und übernimmt ihre Zuteilung für alle Teilnehmer. */
+  activatePhase(huntId: string, phaseId: string): Promise<void>;
+  setAssignment(huntId: string, a: PhaseAssignment): Promise<void>;
 }
 
 const FORBIDDEN = () => new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
@@ -182,5 +200,35 @@ export function createSupabaseHuntsService(client: SupabaseClient): HuntsService
         check(await client.rpc('share_hunt_position', { p_hunt_id: huntId, p_latitude: p.lat, p_longitude: p.lng, p_accuracy: p.accuracy ?? undefined })),
       ),
     stopSharing: (huntId) => guard(async () => check(await client.rpc('stop_hunt_position', { p_hunt_id: huntId }))),
+
+    phases: (huntId) =>
+      guard(async () => sortPhases(unwrap(await client.from('hunt_phases').select(PHASE_COLUMNS).eq('hunt_id', huntId).returns<PhaseRow[]>()).map(phaseFromRow))),
+    assignments: (huntId) =>
+      guard(async () => unwrap(await client.from('hunt_phase_assignments').select(ASSIGNMENT_COLUMNS).eq('hunt_id', huntId).returns<AssignmentRow[]>()).map(assignmentFromRow)),
+    createPhase: (huntId, { name, sortOrder }) =>
+      guard(async () =>
+        phaseFromRow(unwrap(await client.from('hunt_phases').insert({ hunt_id: huntId, name: name.trim(), sort_order: sortOrder }).select(PHASE_COLUMNS).single<PhaseRow>())),
+      ),
+    removePhase: (phaseId) => guard(() => deleteOne('hunt_phases', phaseId)),
+    activatePhase: (huntId, phaseId) => guard(async () => check(await client.rpc('activate_hunt_phase', { p_hunt_id: huntId, p_phase_id: phaseId }))),
+    setAssignment: (huntId, a) =>
+      guard(async () => {
+        // Erst ändern, sonst anlegen (Upsert bräuchte Update-Rechte auf die Schlüsselspalten).
+        const updated = unwrap(
+          await client
+            .from('hunt_phase_assignments')
+            .update({ stand_id: a.standId, zone_id: a.zoneId })
+            .eq('phase_id', a.phaseId)
+            .eq('participant_id', a.participantId)
+            .select('phase_id'),
+        );
+        if (updated.length === 0) {
+          check(
+            await client
+              .from('hunt_phase_assignments')
+              .insert({ hunt_id: huntId, phase_id: a.phaseId, participant_id: a.participantId, stand_id: a.standId, zone_id: a.zoneId }),
+          );
+        }
+      }),
   };
 }

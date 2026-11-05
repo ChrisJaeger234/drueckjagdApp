@@ -11,6 +11,9 @@ import {
   livePermissions,
   type LivePosition,
   sortHunts,
+  sortPhases,
+  type Phase,
+  type PhaseAssignment,
   sortParticipants,
   sortStands,
   type Hunt,
@@ -357,7 +360,7 @@ export class FakeHunts implements HuntsService {
     const h: Hunt = {
       id: `h${++this.seq}`, groupId, groupName: this.groups.groups.get(groupId)?.name ?? null, revierId: null, revierName: null,
       title: 'Drückjagd', description: '', startsAt: '2026-11-21T07:00:00.000Z', endsAt: null, status: 'geplant', meetingPoint: '',
-      meetingLat: null, meetingLng: null, gameRelease: '', safetyNotes: '', emergencyInfo: '', selfJoin: true, createdBy: null, ...data,
+      meetingLat: null, meetingLng: null, gameRelease: '', safetyNotes: '', emergencyInfo: '', selfJoin: true, createdBy: null, currentPhaseId: null, ...data,
     };
     this.hunts.push(h);
     return h.id;
@@ -425,6 +428,13 @@ export class FakeHunts implements HuntsService {
     if (patch.note !== undefined) p.note = patch.note;
     if (patch.standId !== undefined) p.standId = patch.standId;
     if (patch.zoneId !== undefined) p.zoneId = patch.zoneId;
+    // Wie Trigger sync_active_phase_assignment (0016).
+    const phaseId = this.hunts.find((h) => h.id === p.huntId)?.currentPhaseId;
+    if (phaseId && (patch.standId !== undefined || patch.zoneId !== undefined)) {
+      const a = this.assignmentList.find((x) => x.phaseId === phaseId && x.participantId === p.id);
+      if (a) Object.assign(a, { standId: p.standId, zoneId: p.zoneId });
+      else this.assignmentList.push({ huntId: p.huntId, phaseId, participantId: p.id, standId: p.standId, zoneId: p.zoneId });
+    }
   }
   async removeParticipant(id: string) {
     const p = this.participantList.find((x) => x.id === id)!;
@@ -491,6 +501,47 @@ export class FakeHunts implements HuntsService {
   }
   async stopSharing(huntId: string) {
     this.positionMap.delete(`${huntId}:${this.uid()}`);
+  }
+
+  phaseList: Phase[] = [];
+  assignmentList: (PhaseAssignment & { huntId: string })[] = [];
+  async phases(huntId: string) {
+    return clone(sortPhases(this.phaseList.filter((p) => p.huntId === huntId)));
+  }
+  async assignments(huntId: string) {
+    return clone(this.assignmentList.filter((a) => a.huntId === huntId).map((a) => ({ phaseId: a.phaseId, participantId: a.participantId, standId: a.standId, zoneId: a.zoneId })));
+  }
+  async createPhase(huntId: string, { name, sortOrder }: { name: string; sortOrder: number }) {
+    this.requireManage(huntId);
+    const p: Phase = { id: `ph${++this.seq}`, huntId, name: name.trim(), sortOrder };
+    this.phaseList.push(p);
+    return clone(p);
+  }
+  async removePhase(phaseId: string) {
+    const p = this.phaseList.find((x) => x.id === phaseId);
+    if (p) this.requireManage(p.huntId);
+    this.phaseList = this.phaseList.filter((x) => x.id !== phaseId);
+    this.assignmentList = this.assignmentList.filter((a) => a.phaseId !== phaseId);
+    this.hunts.forEach((h) => h.currentPhaseId === phaseId && (h.currentPhaseId = null));
+  }
+  async activatePhase(huntId: string, phaseId: string) {
+    this.requireManage(huntId);
+    this.hunts.find((h) => h.id === huntId)!.currentPhaseId = phaseId;
+    for (const p of this.participantList.filter((x) => x.huntId === huntId)) {
+      const a = this.assignmentList.find((x) => x.phaseId === phaseId && x.participantId === p.id);
+      p.standId = a?.standId ?? null;
+      p.zoneId = a?.zoneId ?? null;
+    }
+  }
+  async setAssignment(huntId: string, a: PhaseAssignment) {
+    this.requireManage(huntId);
+    const existing = this.assignmentList.find((x) => x.phaseId === a.phaseId && x.participantId === a.participantId);
+    if (existing) Object.assign(existing, { standId: a.standId, zoneId: a.zoneId });
+    else this.assignmentList.push({ ...a, huntId });
+    // Wie der Trigger: Zuteilung der aktiven Phase gilt sofort.
+    if (this.hunts.find((h) => h.id === huntId)?.currentPhaseId === a.phaseId) {
+      Object.assign(this.participantList.find((p) => p.id === a.participantId)!, { standId: a.standId, zoneId: a.zoneId });
+    }
   }
 
 }

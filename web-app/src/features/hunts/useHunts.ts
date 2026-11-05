@@ -2,14 +2,14 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { useServices } from '../../app/services';
 import { REPORT_MUTATION_KEY, type ReportVariables } from '../../lib/offline';
 import { AppError, mapError } from '../../lib/errors';
-import type { HuntDraft, HuntRole, HuntStatus, StandInput, ZoneInput } from './huntModel';
+import { sortPhases, type HuntDraft, type HuntRole, type HuntStatus, type Participant, type Phase, type PhaseAssignment, type StandInput, type ZoneInput } from './huntModel';
 
 export const huntKeys = {
   root: ['hunts'] as const,
   all: () => ['hunts', 'all'] as const,
   group: (groupId: string) => ['hunts', 'group', groupId] as const,
   one: (huntId: string) => ['hunts', 'one', huntId] as const,
-  part: (huntId: string, part: 'participants' | 'stands' | 'zones' | 'reports' | 'positions') => ['hunts', 'one', huntId, part] as const,
+  part: (huntId: string, part: 'participants' | 'stands' | 'zones' | 'reports' | 'positions' | 'phases' | 'assignments') => ['hunts', 'one', huntId, part] as const,
 };
 
 export function useAllHunts() {
@@ -33,7 +33,9 @@ export function useHuntDetails(huntId: string) {
   const stands = useQuery({ queryKey: huntKeys.part(huntId, 'stands'), queryFn: () => hunts.stands(huntId) });
   const zones = useQuery({ queryKey: huntKeys.part(huntId, 'zones'), queryFn: () => hunts.zones(huntId) });
   const reports = useQuery({ queryKey: huntKeys.part(huntId, 'reports'), queryFn: () => hunts.reports(huntId) });
-  return { participants, stands, zones, reports };
+  const phases = useQuery({ queryKey: huntKeys.part(huntId, 'phases'), queryFn: () => hunts.phases(huntId) });
+  const assignments = useQuery({ queryKey: huntKeys.part(huntId, 'assignments'), queryFn: () => hunts.assignments(huntId) });
+  return { participants, stands, zones, reports, phases, assignments };
 }
 
 export function useCreateHunt(groupId: string) {
@@ -88,6 +90,26 @@ export function useHuntActions(huntId: string) {
     createReport: useMutation<void, Error, ReportVariables>({ mutationKey: REPORT_MUTATION_KEY }),
     setReportResolved: useMutation(m(({ id, resolved }: { id: string; resolved: boolean }) => hunts.setReportResolved(id, resolved))),
     removeReport: useMutation(m((reportId: string) => hunts.removeReport(reportId))),
+    /**
+     * Neue Phase anlegen. Sie startet mit der Zuteilung der aktiven Phase (bzw. der heutigen
+     * Zuteilung, wenn es noch keine Phasen gibt); die erste Phase wird gleich aktiv.
+     */
+    addPhase: useMutation(
+      m(async ({ phases, currentPhaseId, participants, assignments }: { phases: Phase[]; currentPhaseId: string | null; participants: Participant[]; assignments: PhaseAssignment[] }) => {
+        const sorted = sortPhases(phases);
+        const phase = await hunts.createPhase(huntId, { name: `Phase ${sorted.length + 1}`, sortOrder: (sorted.at(-1)?.sortOrder ?? 0) + 1 });
+        const source = participants.map((p) => {
+          const a = currentPhaseId ? assignments.find((x) => x.phaseId === currentPhaseId && x.participantId === p.id) : null;
+          return { participantId: p.id, standId: currentPhaseId ? (a?.standId ?? null) : p.standId, zoneId: currentPhaseId ? (a?.zoneId ?? null) : p.zoneId };
+        });
+        for (const s of source.filter((x) => x.standId || x.zoneId)) await hunts.setAssignment(huntId, { phaseId: phase.id, ...s });
+        if (sorted.length === 0) await hunts.activatePhase(huntId, phase.id);
+        return phase;
+      }),
+    ),
+    removePhase: useMutation(m((phaseId: string) => hunts.removePhase(phaseId))),
+    activatePhase: useMutation(m((phaseId: string) => hunts.activatePhase(huntId, phaseId))),
+    setAssignment: useMutation(m((a: PhaseAssignment) => hunts.setAssignment(huntId, a))),
   };
 }
 

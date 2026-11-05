@@ -79,11 +79,13 @@ export interface Hunt {
   emergencyInfo: string;
   selfJoin: boolean;
   createdBy: string | null;
+  /** Aktive Phase (Migration 0016), null = ohne Phasen. */
+  currentPhaseId: string | null;
 }
 
 export const HUNT_COLUMNS =
   'id, group_id, revier_id, title, description, starts_at, ends_at, status, meeting_point, meeting_latitude, meeting_longitude, ' +
-  'game_release, safety_notes, emergency_info, self_join, created_by, group:groups(name), revier:reviere(name)';
+  'game_release, safety_notes, emergency_info, self_join, created_by, current_phase_id, group:groups(name), revier:reviere(name)';
 
 export interface HuntRow {
   id: string;
@@ -102,6 +104,7 @@ export interface HuntRow {
   emergency_info: string | null;
   self_join: boolean | null;
   created_by: string | null;
+  current_phase_id?: string | null;
   group?: { name: string } | null;
   revier?: { name: string } | null;
 }
@@ -126,7 +129,56 @@ export function huntFromRow(r: HuntRow): Hunt {
     emergencyInfo: r.emergency_info ?? '',
     selfJoin: r.self_join ?? true,
     createdBy: r.created_by,
+    currentPhaseId: r.current_phase_id ?? null,
   };
+}
+
+// ------------------------------------------------------------ Phasen (Migration 0016)
+
+export interface Phase {
+  id: string;
+  huntId: string;
+  name: string;
+  sortOrder: number;
+}
+
+export const PHASE_COLUMNS = 'id, hunt_id, name, sort_order';
+
+export interface PhaseRow {
+  id: string;
+  hunt_id: string;
+  name: string;
+  sort_order: number | null;
+}
+
+export const phaseFromRow = (r: PhaseRow): Phase => ({ id: r.id, huntId: r.hunt_id, name: r.name, sortOrder: r.sort_order ?? 0 });
+
+export const sortPhases = (list: Phase[]) => [...list].sort((a, b) => a.sortOrder - b.sortOrder || a.name.localeCompare(b.name, 'de', { numeric: true }));
+
+export interface PhaseAssignment {
+  phaseId: string;
+  participantId: string;
+  standId: string | null;
+  zoneId: string | null;
+}
+
+export const ASSIGNMENT_COLUMNS = 'phase_id, participant_id, stand_id, zone_id';
+
+export interface AssignmentRow {
+  phase_id: string;
+  participant_id: string;
+  stand_id: string | null;
+  zone_id: string | null;
+}
+
+export const assignmentFromRow = (r: AssignmentRow): PhaseAssignment => ({ phaseId: r.phase_id, participantId: r.participant_id, standId: r.stand_id, zoneId: r.zone_id });
+
+/** Nächste Phase nach der aktiven (oder die erste, wenn keine aktiv ist); null am Ende. */
+export function nextPhase(phases: Phase[], currentId: string | null): Phase | null {
+  const sorted = sortPhases(phases);
+  if (!currentId) return sorted[0] ?? null;
+  const i = sorted.findIndex((p) => p.id === currentId);
+  return i >= 0 ? (sorted[i + 1] ?? null) : (sorted[0] ?? null);
 }
 
 export interface HuntDraft {
