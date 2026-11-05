@@ -148,10 +148,10 @@ export function ReportButtons({ huntId, stands, myStandId, ownPos, actions }: { 
                 setKind(kind === k ? null : k);
               }}
               className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl border text-sm font-medium ${
-                kind === k ? 'border-primary bg-primary text-on-primary' : k === 'angeschossen' ? 'border-danger/50 bg-surface text-danger' : 'border-line bg-surface'
+                kind === k ? 'border-primary bg-primary text-on-primary' : 'border-line bg-surface'
               }`}
             >
-              <Icon aria-hidden className="size-5" />
+              <Icon aria-hidden className={`size-5 ${k === 'angeschossen' && kind !== k ? 'text-danger' : ''}`} />
               {REPORT_KINDS[k]}
             </button>
           );
