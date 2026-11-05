@@ -62,6 +62,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['src/test/setup.ts'],
+    // Der Umzugshinweis hängt an der Build-Umgebung (Pages setzt VITE_NEW_HOME); Tests laufen ohne.
+    env: { VITE_NEW_HOME: '' },
     include: ['src/**/*.test.{ts,tsx}'],
   },
 });
