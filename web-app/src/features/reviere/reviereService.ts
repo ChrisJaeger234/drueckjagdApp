@@ -30,6 +30,8 @@ export interface ReviereService {
   removeBoundary(revierId: string): Promise<void>;
   waypoints(revierIds: string[]): Promise<Waypoint[]>;
   createWaypoint(revierId: string, input: WaypointInput): Promise<Waypoint>;
+  /** Mehrere Einrichtungen in einem Schritt (Datei-Import). */
+  createWaypoints(revierId: string, inputs: WaypointInput[]): Promise<void>;
   updateWaypoint(waypointId: string, input: WaypointInput): Promise<void>;
   removeWaypoint(waypointId: string): Promise<void>;
 }
@@ -119,6 +121,11 @@ export function createSupabaseReviereService(client: SupabaseClient): ReviereSer
           unwrap(await client.from('waypoints').insert({ revier_id: revierId, ...waypointRow(input) }).select(WAYPOINT_COLUMNS).single<WaypointRow>()),
         ),
       ),
+    createWaypoints: (revierId, inputs) =>
+      guard(async () => {
+        if (inputs.length === 0) return;
+        unwrap(await client.from('waypoints').insert(inputs.map((w) => ({ revier_id: revierId, ...waypointRow(w) }))).select('id'));
+      }),
     updateWaypoint: (waypointId, input) =>
       guard(async () => {
         const rows = unwrap(await client.from('waypoints').update(waypointRow(input)).eq('id', waypointId).select('id'));

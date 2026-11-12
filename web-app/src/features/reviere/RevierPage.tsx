@@ -5,7 +5,7 @@ import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Badge, Button, Card, ConfirmButton, Page } from '../../components/ui';
 import { FormError, FormSuccess } from '../../components/form';
 import { mapError } from '../../lib/errors';
-import { areaHectares, bboxOf, BoundaryImportError, parseBoundaryFile, polygonFromPoints } from '../../modules/map/geo';
+import { areaHectares, bboxOf, boundaryFromFeatures, BoundaryImportError, featuresFromFile, polygonFromPoints } from '../../modules/map/geo';
 import type { LayerId } from '../../modules/map/layers';
 import { LazyMap } from '../../modules/map/LazyMap';
 import { useOwnPosition } from '../../modules/map/useOwnPosition';
@@ -14,6 +14,8 @@ import type { GroupPermissions } from '../groups/groupModel';
 import { useMyGroup } from '../groups/useGroups';
 import { MapToolbar, WaypointForm } from './mapControls';
 import { CATEGORY_LABEL, categoryColor, waypointMarkers, type Revier, type Waypoint } from './revierModel';
+import { revierImportFrom, type RevierImport } from './revierImport';
+import { RevierImportCard, selectedCounts, type RevierImportSelection } from './RevierImportCard';
 import { OfflineMapCard } from '../offlineMaps/OfflineMapCard';
 import { useBoundaries, useRevier, useRevierActions, useWaypoints } from './useReviere';
 
@@ -37,7 +39,8 @@ type Mode =
   | { kind: 'view' }
   | { kind: 'draw'; points: Position[] }
   | { kind: 'place'; point: { lat: number; lng: number } | null }
-  | { kind: 'edit'; waypoint: Waypoint };
+  | { kind: 'edit'; waypoint: Waypoint }
+  | { kind: 'import'; selection: RevierImportSelection };
 
 function RevierView({ revier }: { revier: Revier }) {
   const user = useUser();
@@ -45,7 +48,6 @@ function RevierView({ revier }: { revier: Revier }) {
   const ids = useMemo(() => [revier.id], [revier.id]);
   const { data: boundaries = [] } = useBoundaries(ids);
   const { data: waypoints = [] } = useWaypoints(ids);
-  const markers = useMemo(() => waypointMarkers(waypoints), [waypoints]);
   const actions = useRevierActions();
   const navigate = useNavigate();
 
@@ -59,7 +61,23 @@ function RevierView({ revier }: { revier: Revier }) {
   const fileInput = useRef<HTMLInputElement>(null);
 
   const boundary = boundaries[0] ?? null;
-  const fit = useMemo(() => bboxOf([...boundaries.map((b) => b.geometry), ...waypoints.map((w) => [w.lng, w.lat])]), [boundaries, waypoints]);
+  const importing = mode.kind === 'import' ? mode.selection : null;
+  const markers = useMemo(() => {
+    const own = waypointMarkers(waypoints);
+    if (!importing) return own;
+    const preview = importing.waypoints
+      .filter((w) => w.use && w.action !== 'same')
+      .map((w) => ({ id: `import:${w.key}`, lat: w.lat, lng: w.lng, label: w.name, color: categoryColor(w.category), ariaLabel: `Neu: ${CATEGORY_LABEL[w.category]} ${w.name}`, highlight: true }));
+    return [...own, ...preview];
+  }, [waypoints, importing]);
+  const shownBoundaries = importing?.boundary?.use ? [{ id: 'import', geometry: importing.boundary.geometry }] : boundary ? [boundary] : [];
+  const fit = useMemo(
+    () =>
+      importing
+        ? bboxOf([importing.boundary?.geometry, ...importing.waypoints.map((w) => [w.lng, w.lat])])
+        : bboxOf([...boundaries.map((b) => b.geometry), ...waypoints.map((w) => [w.lng, w.lat])]),
+    [boundaries, waypoints, importing],
+  );
   const canEdit = permissions?.canEditRevier ?? false;
   const canEditWaypoint = (w: Waypoint) => canEdit || w.createdBy === user.id;
   const ownPos = position.status === 'ok' ? position.position : null;
@@ -89,12 +107,57 @@ function RevierView({ revier }: { revier: Revier }) {
     e.target.value = '';
     if (!file) return;
     setImportError(null);
+    setNotice(null);
     try {
-      const geometry = parseBoundaryFile(file.name, await file.text());
-      actions.saveBoundary.mutate({ revierId: revier.id, geometry }, { onSuccess: () => setNotice(`Reviergrenze aus „${file.name}“ übernommen.`) });
+      const fc = await featuresFromFile(file);
+      let result: RevierImport;
+      try {
+        result = revierImportFrom(fc, waypoints);
+      } catch (err) {
+        // Keine Fläche und keine Punkte: Linien (z. B. ein abgelaufener GPX-Track) als Grenze schließen.
+        const lines = boundaryFromFeatures(fc, { closeLines: true });
+        if (!lines) throw err;
+        result = { boundary: lines, waypoints: [] };
+      }
+      if (result.waypoints.length === 0 && result.boundary) {
+        const geometry = result.boundary;
+        actions.saveBoundary.mutate({ revierId: revier.id, geometry }, { onSuccess: () => setNotice(`Reviergrenze aus „${file.name}“ übernommen.`) });
+        return;
+      }
+      setSelected(null);
+      actions.importFile.reset();
+      setMode({
+        kind: 'import',
+        selection: {
+          fileName: file.name,
+          boundary: result.boundary ? { use: true, geometry: result.boundary, hectares: areaHectares(result.boundary) } : null,
+          waypoints: result.waypoints.map((w) => ({ ...w, use: w.action !== 'same' })),
+        },
+      });
     } catch (err) {
       setImportError(err instanceof BoundaryImportError ? err.message : 'Die Datei konnte nicht gelesen werden.');
     }
+  }
+
+  function saveImport(selection: RevierImportSelection) {
+    const chosen = selection.waypoints.filter((w) => w.use && w.action !== 'same');
+    const input = (w: (typeof chosen)[number]) => ({ name: w.name, description: w.description, category: w.category, lat: w.lat, lng: w.lng });
+    const { creates, updates, boundary: withBoundary } = selectedCounts(selection);
+    actions.importFile.mutate(
+      {
+        revierId: revier.id,
+        boundary: withBoundary ? selection.boundary!.geometry : null,
+        creates: chosen.filter((w) => w.action === 'new').map(input),
+        updates: chosen.filter((w) => w.action === 'update' && w.existingId).map((w) => ({ id: w.existingId!, input: input(w) })),
+      },
+      {
+        onSuccess: () => {
+          setMode({ kind: 'view' });
+          const parts = [withBoundary ? 'Reviergrenze' : null, creates ? `${creates} neue Einrichtungen` : null, updates ? `${updates} geänderte Einrichtungen` : null].filter(Boolean);
+          setNotice(`Aus „${selection.fileName}“ übernommen: ${parts.join(', ')}.`);
+        },
+      },
+    );
   }
 
   const draft = mode.kind === 'draw' ? mode.points : mode.kind === 'place' && mode.point ? [[mode.point.lng, mode.point.lat]] : undefined;
@@ -120,15 +183,27 @@ function RevierView({ revier }: { revier: Revier }) {
       <LazyMap
         className="h-[55vh] min-h-72"
         layer={layer}
-        boundaries={boundary ? [boundary] : []}
+        boundaries={shownBoundaries}
         markers={markers}
         draft={draft}
         position={ownPos}
         fit={fit}
-        fitKey={`${revier.id}:${boundary?.id ?? ''}:${waypoints.length > 0}`}
+        fitKey={`${revier.id}:${boundary?.id ?? ''}:${waypoints.length > 0}:${importing?.fileName ?? ''}`}
         onMapClick={onMapClick}
         onMarkerClick={(id) => mode.kind === 'view' && setSelected(waypoints.find((w) => w.id === id) ?? null)}
       />
+
+      {mode.kind === 'import' && (
+        <RevierImportCard
+          selection={mode.selection}
+          hasBoundary={!!boundary}
+          onChange={(selection) => setMode({ kind: 'import', selection })}
+          onSave={() => saveImport(mode.selection)}
+          onCancel={() => setMode({ kind: 'view' })}
+          pending={actions.importFile.isPending}
+          error={actions.importFile.error}
+        />
+      )}
 
       {mode.kind === 'draw' && (
         <Card className="grid gap-3">
@@ -262,22 +337,27 @@ function RevierView({ revier }: { revier: Revier }) {
         />
       )}
       {mode.kind === 'view' && <OfflineMapCard revierId={revier.id} name={revier.name} area={fit} />}
-      <input ref={fileInput} type="file" accept=".kml,.gpx,.geojson,.json,application/vnd.google-earth.kml+xml,application/gpx+xml,application/geo+json,application/json" className="hidden" onChange={onImport} data-testid="boundary-file" />
+      <input ref={fileInput} type="file" accept=".kml,.kmz,.gpx,.geojson,.json,application/vnd.google-earth.kml+xml,application/gpx+xml,application/geo+json,application/json" className="hidden" onChange={onImport} data-testid="boundary-file" />
 
       <Card>
         <div className="mb-3 flex items-center justify-between gap-2">
           <h2 className="font-semibold">Einrichtungen ({waypoints.length})</h2>
           {canEdit && mode.kind === 'view' && (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setNotice(null);
-                setSelected(null);
-                setMode({ kind: 'place', point: null });
-              }}
-            >
-              <MapPin aria-hidden className="size-4" /> Einrichtung setzen
-            </Button>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button variant="secondary" onClick={() => fileInput.current?.click()}>
+                <FileUp aria-hidden className="size-4" /> Einrichtungen importieren
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setNotice(null);
+                  setSelected(null);
+                  setMode({ kind: 'place', point: null });
+                }}
+              >
+                <MapPin aria-hidden className="size-4" /> Einrichtung setzen
+              </Button>
+            </div>
           )}
         </div>
         {waypoints.length === 0 ? (
@@ -354,7 +434,7 @@ function BoundaryCard({
               <FileUp aria-hidden className="size-4" /> Datei importieren
             </Button>
           </div>
-          <p className="text-xs text-muted">KML (z. B. aus Google Earth), GPX oder GeoJSON. Linien werden zu einer Fläche geschlossen.</p>
+          <p className="text-xs text-muted">KML/KMZ (z. B. aus Google Earth oder Jagdbegleiter), GPX oder GeoJSON. Enthält die Datei auch Punkte, werden sie als Einrichtungen angeboten.</p>
           {area != null && (
             <ConfirmButton
               label="Grenze entfernen"
