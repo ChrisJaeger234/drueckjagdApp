@@ -5,7 +5,7 @@ import { featuresFromText } from '../../modules/map/geo';
 import { FakeGroups, FakeProfiles, FakeReviere } from '../../test/fakes';
 import { renderApp, signedIn } from '../../test/renderApp';
 import type { Waypoint } from './revierModel';
-import { categoryFromIcon, importCategory, revierImportFrom } from './revierImport';
+import { categoryFromIcon, explicitCategory, importCategory, revierImportFrom } from './revierImport';
 
 // Aufgebaut wie der KML-Export der App „Jagdbegleiter“: nur Punkte, Typ im Symbol-Dateinamen.
 const pm = (name: string, icon: string, x: number, y: number, desc = '') =>
@@ -66,6 +66,13 @@ describe('Revier-Import (Logik)', () => {
     expect(importCategory('Minerallecke an der offenen Leiter', 'Salzlecke.png')).toBe('salzlecke');
     expect(importCategory('Mobiler Sitz Robert', 'Drueckjagdbock.png')).toBe('drueckjagdbock');
     expect(importCategory('', 'unbekannt.png')).toBe('sonstiges');
+  });
+
+  it('nimmt eine ausdrücklich angegebene Art vor allem anderen', () => {
+    const withArt = kml(pm('DJB 3', 'Kanzel', 7.248978, 51.16014).replace('<ExtendedData>', '<ExtendedData><Data name="Art"><value>kanzel_offen</value></Data>'));
+    expect(revierImportFrom(featuresFromText('e.kml', withArt)).waypoints[0]!.category).toBe('kanzel_offen');
+    expect(explicitCategory({ Art: 'Kanzel geschlossen' })).toBe('kanzel');
+    expect(explicitCategory({ Art: 'quatsch' })).toBeNull();
   });
 
   it('erkennt vorhandene Einrichtungen und gleiche Namen in der Datei', () => {

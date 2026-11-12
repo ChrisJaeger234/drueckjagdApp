@@ -91,6 +91,19 @@ function categoryFromName(name: string): WaypointCategory | null {
   return guessPointCategory(name);
 }
 
+/** Ausdrücklich angegebene Art (ExtendedData „Art“ in KML, „category“ in GeoJSON), z. B. von der App selbst vorbereitet. */
+export function explicitCategory(props: Record<string, unknown> | null | undefined): WaypointCategory | null {
+  for (const k of ['Art', 'art', 'category', 'kategorie', 'Kategorie']) {
+    const v = props?.[k];
+    if (typeof v !== 'string') continue;
+    const value = v.trim().toLowerCase();
+    if (value in CATEGORY_LABEL) return value as WaypointCategory;
+    const byLabel = (Object.entries(CATEGORY_LABEL) as [WaypointCategory, string][]).find(([, l]) => l.toLowerCase() === value);
+    if (byLabel) return byLabel[0];
+  }
+  return null;
+}
+
 /** Art eines Punktes: zuerst das Symbol der Datei, sonst aus dem Namen geraten, sonst Sonstiges. */
 export function importCategory(name: string, icon: unknown): WaypointCategory {
   return categoryFromIcon(icon) ?? (name ? categoryFromName(name) : null) ?? 'sonstiges';
@@ -159,7 +172,7 @@ export function revierImportFrom(fc: FeatureCollection, existing: Waypoint[] = [
 
   const waypoints: ImportWaypoint[] = points.map(({ f, lat, lng, i }) => {
     const fileName = cut(clean(f.properties?.name), MAX_NAME);
-    const category = importCategory(fileName, f.properties?.icon);
+    const category = explicitCategory(f.properties) ?? importCategory(fileName, f.properties?.icon);
     const description = descriptionOf(f.properties?.description);
 
     // Vorhandene Einrichtung: gleicher Name, sonst gleiche Art am gleichen Ort.
