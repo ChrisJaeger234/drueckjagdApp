@@ -101,7 +101,7 @@ describe('Reviere', () => {
     s.reviere.seedWaypoint(id, { name: 'Kanzel Eiche', category: 'kanzel' });
     renderApp(`/revier/${id}`, s);
     await userEvent.click(await screen.findByRole('button', { name: 'Marker Kanzel Eiche' }));
-    expect(screen.getAllByText('Kanzel').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Kanzel geschlossen').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Einrichtung setzen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Grenze zeichnen' })).not.toBeInTheDocument();

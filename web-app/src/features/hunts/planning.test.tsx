@@ -48,7 +48,7 @@ describe('Jagd planen mit Einrichtungen des Reviers', () => {
     expect(s.hunts.standList[0]!.waypointId).toBe(s.reviere.waypointList[0]!.id);
     // Übernommene Einrichtung verschwindet aus der Liste, der Stand zeigt die Art.
     expect(within(screen.getByRole('list', { name: 'Einrichtungen aus dem Revier' })).queryByText('Langer Kanzel')).not.toBeInTheDocument();
-    expect(within(screen.getByRole('list', { name: 'Stände' })).getByText('Drückjagdbock')).toBeInTheDocument();
+    expect(within(screen.getByRole('list', { name: 'Stände' })).getByText('Drückjagdbock ohne Dach')).toBeInTheDocument();
   });
 
   it('übernimmt auch per Antippen in der Karte', async () => {

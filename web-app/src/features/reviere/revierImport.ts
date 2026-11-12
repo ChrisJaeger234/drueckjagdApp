@@ -42,6 +42,9 @@ const ICON_CATEGORY: Record<string, WaypointCategory> = {
   drueckjagdbock: 'drueckjagdbock',
   drückjagdbock: 'drueckjagdbock',
   bock: 'drueckjagdbock',
+  // Jagdbegleiter: „Drueckjagdbock2“ ist der offene Sitz mit Dach.
+  drueckjagdbockmitdach: 'kanzel_offen',
+  kanzeloffen: 'kanzel_offen',
   eisensitz: 'ansitzleiter',
   leitersitz: 'ansitzleiter',
   leiter: 'ansitzleiter',
@@ -71,8 +74,9 @@ const ICON_CATEGORY: Record<string, WaypointCategory> = {
 export function categoryFromIcon(href: unknown): WaypointCategory | null {
   if (typeof href !== 'string') return null;
   const file = href.split(/[/\\]/).pop() ?? '';
-  const base = file.replace(/\.[a-z0-9]+$/i, '').replace(/[\d_\-\s]+$/, '').toLowerCase();
-  return ICON_CATEGORY[base] ?? null;
+  const name = file.replace(/\.[a-z0-9]+$/i, '').toLowerCase();
+  if (name === 'drueckjagdbock2') return 'kanzel_offen';
+  return ICON_CATEGORY[name.replace(/[\d_\-\s]+$/, '')] ?? null;
 }
 
 /** Kategorie aus dem Namen; ergänzt guessPointCategory um Reviereinrichtungen. */
@@ -87,14 +91,9 @@ function categoryFromName(name: string): WaypointCategory | null {
   return guessPointCategory(name);
 }
 
-/** Sitze und Stände: Nennt der Name eine dieser Arten, gilt der Name vor dem Symbol (z. B. „DJB 3“ mit Kanzel-Symbol). */
-const STAND_TYPES = new Set<WaypointCategory>(['hochsitz', 'kanzel', 'fahrbare_kanzel', 'drueckjagdbock', 'ansitzleiter']);
-
-/** Art eines Punktes: Sitzart aus dem Namen, sonst Symbol, sonst Name, sonst Sonstiges. */
+/** Art eines Punktes: zuerst das Symbol der Datei, sonst aus dem Namen geraten, sonst Sonstiges. */
 export function importCategory(name: string, icon: unknown): WaypointCategory {
-  const byName = name ? categoryFromName(name) : null;
-  if (byName && STAND_TYPES.has(byName)) return byName;
-  return categoryFromIcon(icon) ?? byName ?? 'sonstiges';
+  return categoryFromIcon(icon) ?? (name ? categoryFromName(name) : null) ?? 'sonstiges';
 }
 
 const clean = (s: unknown) => (typeof s === 'string' ? s.replace(/\s+/g, ' ').trim() : '');

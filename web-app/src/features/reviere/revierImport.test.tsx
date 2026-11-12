@@ -31,7 +31,8 @@ const existing = (data: Partial<Waypoint>): Waypoint => ({ id: 'w1', revierId: '
 
 describe('Revier-Import (Logik)', () => {
   it('liest die Art aus dem Jagdbegleiter-Symbol', () => {
-    expect(categoryFromIcon('http://nature-software.com/images/symbols/Drueckjagdbock2.png')).toBe('drueckjagdbock');
+    expect(categoryFromIcon('http://nature-software.com/images/symbols/Drueckjagdbock2.png')).toBe('kanzel_offen');
+    expect(categoryFromIcon('http://nature-software.com/images/symbols/Drueckjagdbock.png')).toBe('drueckjagdbock');
     expect(categoryFromIcon('Saukanzel.png')).toBe('kanzel');
     expect(categoryFromIcon('http://x/unbekannt.png')).toBeNull();
     expect(categoryFromIcon(undefined)).toBeNull();
@@ -43,23 +44,24 @@ describe('Revier-Import (Logik)', () => {
     expect(result.waypoints.map((w) => [w.name, w.category, w.action])).toEqual([
       ['Kirrung Drei Eichen', 'kirrung', 'new'],
       ['Wäschdiek', 'kanzel', 'new'],
-      ['Drückjagdbock 10 mit Dach', 'drueckjagdbock', 'new'],
+      ['Drückjagdbock 10 mit Dach', 'kanzel_offen', 'new'],
       ['Stahlleiter Birgder Höhe', 'ansitzleiter', 'new'],
       ['Lorke unten im Wald', 'hochsitz', 'new'],
-      ['DJB 3', 'drueckjagdbock', 'new'],
+      ['DJB 3', 'kanzel', 'new'],
       ['Führerbunker', 'fahrbare_kanzel', 'new'],
       ['Wildkamera', 'wildkamera', 'new'],
       ['Wildkamera', 'wildkamera', 'new'],
-      ['Drückjagdbock 1 Leiter', 'drueckjagdbock', 'new'],
+      ['Drückjagdbock 1 Leiter', 'ansitzleiter', 'new'],
       ['Minerallecke a.d. Buche', 'salzlecke', 'new'],
     ]);
     expect(result.waypoints[7]!.generatedName).toBe(true);
     expect(result.waypoints[9]!.description).toBe('Unter Buche, Leiter Benni');
   });
 
-  it('nimmt bei Sitzen den Namen vor dem Symbol', () => {
-    expect(importCategory('Drückjagdbock 13', 'Leitersitz.png')).toBe('drueckjagdbock');
-    expect(importCategory('DJB 2A', 'Kanzel.png')).toBe('drueckjagdbock');
+  it('nimmt das Symbol vor dem Namen', () => {
+    expect(importCategory('Drückjagdbock 13', 'Leitersitz.png')).toBe('ansitzleiter');
+    expect(importCategory('DJB 2A', 'Kanzel.png')).toBe('kanzel');
+    expect(importCategory('Neuer Bock', undefined)).toBe('drueckjagdbock');
     expect(importCategory('Suhle', 'Saukanzel.png')).toBe('kanzel');
     expect(importCategory('Minerallecke an der offenen Leiter', 'Salzlecke.png')).toBe('salzlecke');
     expect(importCategory('Mobiler Sitz Robert', 'Drueckjagdbock.png')).toBe('drueckjagdbock');
