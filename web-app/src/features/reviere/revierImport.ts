@@ -37,8 +37,8 @@ const SAME_PLACE_M = 5;
 const ICON_CATEGORY: Record<string, WaypointCategory> = {
   kanzel: 'kanzel',
   saukanzel: 'kanzel',
-  fahrbare: 'kanzel',
-  fahrbarekanzel: 'kanzel',
+  fahrbare: 'fahrbare_kanzel',
+  fahrbarekanzel: 'fahrbare_kanzel',
   drueckjagdbock: 'drueckjagdbock',
   drückjagdbock: 'drueckjagdbock',
   bock: 'drueckjagdbock',
@@ -83,7 +83,18 @@ function categoryFromName(name: string): WaypointCategory | null {
   if (/f(ü|ue)tterung/.test(n)) return 'fuetterung';
   if (/\bcam\b|kamera/.test(n)) return 'wildkamera';
   if (/wildacker/.test(n)) return 'wildacker';
+  if (/fahrbar/.test(n)) return 'fahrbare_kanzel';
   return guessPointCategory(name);
+}
+
+/** Sitze und Stände: Nennt der Name eine dieser Arten, gilt der Name vor dem Symbol (z. B. „DJB 3“ mit Kanzel-Symbol). */
+const STAND_TYPES = new Set<WaypointCategory>(['hochsitz', 'kanzel', 'fahrbare_kanzel', 'drueckjagdbock', 'ansitzleiter']);
+
+/** Art eines Punktes: Sitzart aus dem Namen, sonst Symbol, sonst Name, sonst Sonstiges. */
+export function importCategory(name: string, icon: unknown): WaypointCategory {
+  const byName = name ? categoryFromName(name) : null;
+  if (byName && STAND_TYPES.has(byName)) return byName;
+  return categoryFromIcon(icon) ?? byName ?? 'sonstiges';
 }
 
 const clean = (s: unknown) => (typeof s === 'string' ? s.replace(/\s+/g, ' ').trim() : '');
@@ -135,9 +146,7 @@ export function revierImportFrom(fc: FeatureCollection, existing: Waypoint[] = [
 
   const byName = new Map(existing.map((w) => [key(w.name), w]));
   const claimed = new Set<string>();
-  const usedNames = new Set(existing.map((w) => key(w.name)));
   const fileNames = new Set<string>();
-  const counters = new Map<WaypointCategory, number>();
 
   const freeName = (base: string) => {
     if (!fileNames.has(key(base))) return base;
@@ -146,19 +155,12 @@ export function revierImportFrom(fc: FeatureCollection, existing: Waypoint[] = [
       if (!fileNames.has(key(candidate))) return candidate;
     }
   };
-  const generatedName = (category: WaypointCategory) => {
-    for (let n = counters.get(category) ?? 1; ; n++) {
-      const candidate = `${CATEGORY_LABEL[category]} ${n}`;
-      if (!usedNames.has(key(candidate)) && !fileNames.has(key(candidate))) {
-        counters.set(category, n + 1);
-        return candidate;
-      }
-    }
-  };
+  /** Punkte ohne Namen heißen wie ihre Art, z. B. „Wildkamera“ (mehrfach erlaubt). */
+  const generatedName = (category: WaypointCategory) => CATEGORY_LABEL[category];
 
   const waypoints: ImportWaypoint[] = points.map(({ f, lat, lng, i }) => {
     const fileName = cut(clean(f.properties?.name), MAX_NAME);
-    const category = categoryFromIcon(f.properties?.icon) ?? (fileName ? categoryFromName(fileName) : null) ?? 'sonstiges';
+    const category = importCategory(fileName, f.properties?.icon);
     const description = descriptionOf(f.properties?.description);
 
     // Vorhandene Einrichtung: gleicher Name, sonst gleiche Art am gleichen Ort.
@@ -168,7 +170,7 @@ export function revierImportFrom(fc: FeatureCollection, existing: Waypoint[] = [
     if (match) claimed.add(match.id);
 
     const name = match && !fileName ? match.name : fileName ? freeName(fileName) : generatedName(category);
-    fileNames.add(key(name));
+    if (fileName) fileNames.add(key(name));
 
     let action: ImportAction = 'new';
     if (match) {

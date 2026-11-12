@@ -126,13 +126,14 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           highlight: me?.standId === s.id,
         };
       }),
-      ...freeWaypoints.map((w) => ({ id: `wp:${w.id}`, lat: w.lat, lng: w.lng, label: w.name, color: '#9e9e9e', ariaLabel: `Einrichtung ${w.name}` })),
+      // Nicht übernommene Einrichtungen sieht nur die Planung.
+      ...(perms.canManage ? freeWaypoints : []).map((w) => ({ id: `wp:${w.id}`, lat: w.lat, lng: w.lng, label: w.name, color: '#9e9e9e', ariaLabel: `Einrichtung ${w.name}` })),
       ...(live.canView ? liveMarkers(positions, people, user.id) : []),
       ...(importing?.stands ?? [])
         .filter((s) => s.use && !s.duplicate)
         .map((s) => ({ id: `import-${s.key}`, lat: s.lat, lng: s.lng, label: s.label, color: STAND_PREVIEW_COLOR, ariaLabel: `Neuer Stand ${s.label}` })),
     ],
-    [standList, people, me?.standId, live.canView, positions, user.id, importing, freeWaypoints],
+    [standList, people, me?.standId, live.canView, positions, user.id, importing, freeWaypoints, perms.canManage],
   );
   const areas = useMemo(
     () => [
@@ -169,6 +170,14 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           setNotice(`${label} als Stand übernommen.`);
         },
       },
+    );
+  }
+  function adoptMany(list: Waypoint[]) {
+    setNotice(null);
+    const stands = list.map((w) => ({ label: w.name.trim().slice(0, 60).trim(), lat: w.lat, lng: w.lng, waypointId: w.id, category: w.category, description: '' }));
+    actions.importMap.mutate(
+      { zones: [], stands },
+      { onSuccess: () => setNotice(`${stands.length} ${stands.length === 1 ? 'Einrichtung' : 'Einrichtungen'} als Stände übernommen.`) },
     );
   }
   const startMode = (m: Mode) => {
@@ -368,7 +377,15 @@ function HuntView({ hunt }: { hunt: Hunt }) {
         actions={actions}
       />
       <StandsCard stands={standList} participants={people} perms={perms} actions={actions} />
-      {perms.canManage && mode.kind === 'view' && <RevierWaypointsCard waypoints={freeWaypoints} onPick={(w) => startMode({ kind: 'adopt', waypoint: w })} />}
+      {perms.canManage && mode.kind === 'view' && (
+        <RevierWaypointsCard
+          waypoints={freeWaypoints}
+          onPick={(w) => startMode({ kind: 'adopt', waypoint: w })}
+          onAdoptMany={adoptMany}
+          pending={actions.importMap.isPending}
+          error={actions.importMap.error}
+        />
+      )}
       <ZonesCard zones={zoneList} perms={perms} actions={actions} />
       <ParticipantsCard hunt={hunt} participants={people} stands={standList} zones={zoneList} perms={perms} actions={actions} userId={user.id} />
       {perms.canManage && (hunt.status === 'laufend' || hunt.status === 'beendet') && (

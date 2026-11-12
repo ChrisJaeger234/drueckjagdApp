@@ -60,6 +60,33 @@ describe('Jagd planen mit Einrichtungen des Reviers', () => {
     await waitFor(() => expect(s.hunts.standList[0]).toMatchObject({ label: 'Parkplatz Hof', category: 'parkplatz' }));
   });
 
+  it('übernimmt angehakte Einrichtungen auf einmal', async () => {
+    const s = setup();
+    renderApp(`/jagd/${s.huntId}`, s);
+    const list = await screen.findByRole('list', { name: 'Einrichtungen aus dem Revier' });
+    await userEvent.click(within(list).getByRole('checkbox', { name: 'Langer Kanzel' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Alle Parkplatz' }));
+    await userEvent.click(screen.getByRole('button', { name: '2 Einrichtungen übernehmen' }));
+    expect(await screen.findByText('2 Einrichtungen als Stände übernommen.')).toBeInTheDocument();
+    expect(s.hunts.standList.map((x) => [x.label, x.category])).toEqual([
+      ['Langer Kanzel', 'kanzel'],
+      ['Parkplatz Hof', 'parkplatz'],
+    ]);
+  });
+
+  it('zeigt nicht übernommene Einrichtungen nur der Planung', async () => {
+    const s = setup();
+    const other = 'u-schuetze';
+    s.profiles.seed(other, { displayName: 'Eva', username: 'eva' });
+    s.groups.memberList.push({ ...s.groups.memberList[0]!, userId: other, role: 'member' });
+    s.hunts.seedParticipant(s.huntId, other, 'schuetze', null);
+    s.auth.user = { ...s.auth.user!, id: other };
+    renderApp(`/jagd/${s.huntId}`, s);
+    expect(await screen.findByTestId('map')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Marker Langer Kanzel' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('list', { name: 'Einrichtungen aus dem Revier' })).not.toBeInTheDocument();
+  });
+
   it('setzt einen neuen Stand mit Art', async () => {
     const s = setup();
     renderApp(`/jagd/${s.huntId}`, s);

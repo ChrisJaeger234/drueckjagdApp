@@ -5,7 +5,7 @@ import { featuresFromText } from '../../modules/map/geo';
 import { FakeGroups, FakeProfiles, FakeReviere } from '../../test/fakes';
 import { renderApp, signedIn } from '../../test/renderApp';
 import type { Waypoint } from './revierModel';
-import { categoryFromIcon, revierImportFrom } from './revierImport';
+import { categoryFromIcon, importCategory, revierImportFrom } from './revierImport';
 
 // Aufgebaut wie der KML-Export der App „Jagdbegleiter“: nur Punkte, Typ im Symbol-Dateinamen.
 const pm = (name: string, icon: string, x: number, y: number, desc = '') =>
@@ -46,15 +46,24 @@ describe('Revier-Import (Logik)', () => {
       ['Drückjagdbock 10 mit Dach', 'drueckjagdbock', 'new'],
       ['Stahlleiter Birgder Höhe', 'ansitzleiter', 'new'],
       ['Lorke unten im Wald', 'hochsitz', 'new'],
-      ['DJB 3', 'kanzel', 'new'],
-      ['Führerbunker', 'kanzel', 'new'],
-      ['Wildkamera 1', 'wildkamera', 'new'],
-      ['Wildkamera 2', 'wildkamera', 'new'],
-      ['Drückjagdbock 1 Leiter', 'ansitzleiter', 'new'],
+      ['DJB 3', 'drueckjagdbock', 'new'],
+      ['Führerbunker', 'fahrbare_kanzel', 'new'],
+      ['Wildkamera', 'wildkamera', 'new'],
+      ['Wildkamera', 'wildkamera', 'new'],
+      ['Drückjagdbock 1 Leiter', 'drueckjagdbock', 'new'],
       ['Minerallecke a.d. Buche', 'salzlecke', 'new'],
     ]);
     expect(result.waypoints[7]!.generatedName).toBe(true);
     expect(result.waypoints[9]!.description).toBe('Unter Buche, Leiter Benni');
+  });
+
+  it('nimmt bei Sitzen den Namen vor dem Symbol', () => {
+    expect(importCategory('Drückjagdbock 13', 'Leitersitz.png')).toBe('drueckjagdbock');
+    expect(importCategory('DJB 2A', 'Kanzel.png')).toBe('drueckjagdbock');
+    expect(importCategory('Suhle', 'Saukanzel.png')).toBe('kanzel');
+    expect(importCategory('Minerallecke an der offenen Leiter', 'Salzlecke.png')).toBe('salzlecke');
+    expect(importCategory('Mobiler Sitz Robert', 'Drueckjagdbock.png')).toBe('drueckjagdbock');
+    expect(importCategory('', 'unbekannt.png')).toBe('sonstiges');
   });
 
   it('erkennt vorhandene Einrichtungen und gleiche Namen in der Datei', () => {
@@ -66,7 +75,7 @@ describe('Revier-Import (Logik)', () => {
       existing({ id: 'a', name: 'wäschdiek', lat: 51.1643, lng: 7.24935 }),
       existing({ id: 'b', name: 'Buche', lat: 51.16, lng: 7.24 }),
       existing({ id: 'c', name: 'Kamera Lorke', category: 'wildkamera', lat: 51.17026, lng: 7.25748 }),
-      existing({ id: 'd', name: 'Wildkamera 1', category: 'wildkamera', lat: 51.1, lng: 7.1 }),
+      existing({ id: 'd', name: 'Wildkamera', category: 'wildkamera', lat: 51.1, lng: 7.1 }),
     ]);
     expect(result.boundary?.coordinates).toHaveLength(1);
     expect(result.waypoints.map((w) => [w.name, w.action, w.existingId])).toEqual([
@@ -100,11 +109,11 @@ describe('Revier-Import (Oberfläche)', () => {
     await userEvent.upload(screen.getByTestId('boundary-file'), new File([file], 'Einrichtungen.kml'));
 
     const list = await screen.findByRole('list', { name: 'Einrichtungen aus der Datei' });
-    expect(within(list).getByText('Wildkamera 1')).toBeInTheDocument();
+    expect(within(list).getByRole('checkbox', { name: /^Wildkamera/ })).toBeInTheDocument();
     expect(within(list).getByText('gibt es schon')).toBeInTheDocument();
     expect(within(list).getByText('wird aktualisiert')).toBeInTheDocument();
     await userEvent.selectOptions(screen.getByLabelText('Art von Leiter'), 'hochsitz');
-    await userEvent.click(within(list).getByRole('checkbox', { name: /Wildkamera 1/ }));
+    await userEvent.click(within(list).getByRole('checkbox', { name: /^Wildkamera/ }));
     await userEvent.click(screen.getByRole('button', { name: 'Grenze, 1 Einrichtung, 1 Änderung übernehmen' }));
 
     expect(await screen.findByText('Aus „Einrichtungen.kml“ übernommen: Reviergrenze, 1 neue Einrichtungen, 1 geänderte Einrichtungen.')).toBeInTheDocument();

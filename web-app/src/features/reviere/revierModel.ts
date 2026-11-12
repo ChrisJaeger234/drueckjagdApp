@@ -54,6 +54,7 @@ export interface RevierBoundary {
 export const WAYPOINT_CATEGORIES = [
   ['hochsitz', 'Hochsitz'],
   ['kanzel', 'Kanzel'],
+  ['fahrbare_kanzel', 'Fahrbare Kanzel'],
   ['drueckjagdbock', 'Drückjagdbock'],
   ['ansitzleiter', 'Ansitzleiter'],
   ['kirrung', 'Kirrung'],
@@ -83,6 +84,7 @@ export function categoryColor(c: WaypointCategory): string {
   switch (c) {
     case 'hochsitz':
     case 'kanzel':
+    case 'fahrbare_kanzel':
     case 'drueckjagdbock':
     case 'ansitzleiter':
       return '#7a4a1f';
