@@ -271,6 +271,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           areas={areas}
           markers={markers}
           draft={draft}
+        drawing={mode.kind === 'zone'}
           position={ownPos}
           fit={fit}
           fitKey={mode.kind === 'import' ? `import:${mode.fileName}` : `${hunt.id}:${boundaries.length}:${zoneList.length > 0}:${standList.length > 0}`}

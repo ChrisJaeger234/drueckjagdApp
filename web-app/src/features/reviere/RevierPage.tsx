@@ -186,6 +186,7 @@ function RevierView({ revier }: { revier: Revier }) {
         boundaries={shownBoundaries}
         markers={markers}
         draft={draft}
+        drawing={mode.kind === 'draw'}
         position={ownPos}
         fit={fit}
         fitKey={`${revier.id}:${boundary?.id ?? ''}:${waypoints.length > 0}:${importing?.fileName ?? ''}`}
