@@ -568,7 +568,7 @@ select is(
 -- =============================================================================
 -- 53
 select enum_has_labels('public', 'waypoint_category', array[
-  'hochsitz', 'kanzel', 'drueckjagdbock', 'ansitzleiter', 'kirrung', 'fuetterung', 'salzlecke',
+  'hochsitz', 'kanzel', 'kanzel_offen', 'fahrbare_kanzel', 'drueckjagdbock', 'ansitzleiter', 'kirrung', 'fuetterung', 'salzlecke',
   'suhle', 'wildacker', 'wildkamera', 'weg', 'sammelplatz', 'parkplatz', 'gefahr', 'sonstiges'],
   'waypoint_category in der Reihenfolge der App');
 -- 54
