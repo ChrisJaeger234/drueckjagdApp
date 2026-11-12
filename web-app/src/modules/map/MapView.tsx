@@ -51,6 +51,8 @@ export interface MapViewProps {
   onMapClick?: (lngLat: { lng: number; lat: number }) => void;
   onMarkerClick?: (id: string) => void;
   className?: string;
+  /** Beim Zeichnen: Namen der Marker ausblenden und Marker nicht antippbar, damit Grenzen sichtbar bleiben. */
+  drawing?: boolean;
 }
 
 let protocolAdded = false;
@@ -107,7 +109,7 @@ function addOverlays(map: MlMap) {
   });
 }
 
-export default function MapView({ layer, boundaries = [], areas = [], markers = [], draft = [], position, fit, fitKey, onMapClick, onMarkerClick, className = '' }: MapViewProps) {
+export default function MapView({ layer, boundaries = [], areas = [], markers = [], draft = [], position, fit, fitKey, onMapClick, onMarkerClick, className = '', drawing = false }: MapViewProps) {
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MlMap | null>(null);
   const [styleVersion, setStyleVersion] = useState(0);
@@ -224,5 +226,5 @@ export default function MapView({ layer, boundaries = [], areas = [], markers = 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [fitKey, fit === null]);
 
-  return <div ref={container} className={`map-view ${className}`} data-testid="map" />;
+  return <div ref={container} className={`map-view ${drawing ? 'map-drawing ' : ''}${className}`} data-testid="map" />;
 }

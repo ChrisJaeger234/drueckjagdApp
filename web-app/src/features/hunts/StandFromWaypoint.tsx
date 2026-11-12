@@ -84,12 +84,16 @@ export function RevierWaypointsCard({
   onAdoptMany,
   pending,
   error,
+  showOnMap,
+  onShowOnMap,
 }: {
   waypoints: Waypoint[];
   onPick: (w: Waypoint) => void;
   onAdoptMany: (list: Waypoint[]) => void;
   pending: boolean;
   error: unknown;
+  showOnMap: boolean;
+  onShowOnMap: (show: boolean) => void;
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   if (waypoints.length === 0) return null;
@@ -112,11 +116,15 @@ export function RevierWaypointsCard({
     });
   };
   return (
-    <Card>
+    <Card className="grid gap-2">
+      <label className="flex min-h-11 items-center gap-2 text-sm">
+        <input type="checkbox" className="size-5 shrink-0 accent-[var(--color-primary)]" checked={showOnMap} onChange={(e) => onShowOnMap(e.target.checked)} />
+        Einrichtungen des Reviers grau in der Karte zeigen
+      </label>
       <details>
         <summary className="flex min-h-11 cursor-pointer items-center font-semibold">Einrichtungen aus dem Revier ({waypoints.length})</summary>
         <p className="mb-2 text-sm text-muted">
-          Nur für die Planung sichtbar (grau in der Karte). Hake an, was für diese Jagd gebraucht wird: Nur übernommene Einrichtungen sehen alle Teilnehmer.
+          Nur für die Planung sichtbar. Hake an, was für diese Jagd gebraucht wird: Nur übernommene Einrichtungen sehen alle Teilnehmer.
         </p>
         <div className="mb-2 flex flex-wrap gap-2" aria-label="Nach Art auswählen">
           {categories.map(([k, l]) => (

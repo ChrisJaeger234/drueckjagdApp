@@ -1,5 +1,5 @@
 import { Link, useNavigate, useParams } from '@tanstack/react-router';
-import { AlertTriangle, ArrowLeft, FileUp, Flag, MapPin, PencilLine, Play, ShieldAlert, Trash2, Undo2, X } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Eye, FileUp, Flag, MapPin, PencilLine, Play, ShieldAlert, Trash2, Undo2, X } from 'lucide-react';
 import type { Position } from 'geojson';
 import { useMemo, useRef, useState, type ChangeEvent } from 'react';
 import { Badge, Button, Card, ConfirmButton, Page } from '../../components/ui';
@@ -17,6 +17,7 @@ import { MapToolbar } from '../reviere/mapControls';
 import { useBoundaries, useWaypoints } from '../reviere/useReviere';
 import { categoryColor, type Waypoint, type WaypointCategory } from '../reviere/revierModel';
 import { HuntSummaryCard } from './HuntSummary';
+import { HuntPreview } from './HuntPreview';
 import { PhasesCard } from './PhasesCard';
 import { RevierWaypointsCard, StandCategorySelect, StandFromWaypointCard } from './StandFromWaypoint';
 import { formatHuntTime } from './format';
@@ -76,6 +77,9 @@ function HuntView({ hunt }: { hunt: Hunt }) {
   const [importError, setImportError] = useState<string | null>(null);
   const fileInput = useRef<HTMLInputElement>(null);
   const importing = mode.kind === 'import' ? mode.selection : null;
+  const [preview, setPreview] = useState(false);
+  /** Graue Einrichtungen des Reviers in der Karte (nur Planung, standardmäßig aus). */
+  const [showWaypoints, setShowWaypoints] = useState(false);
 
   async function onImportFile(e: ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -127,13 +131,13 @@ function HuntView({ hunt }: { hunt: Hunt }) {
         };
       }),
       // Nicht übernommene Einrichtungen sieht nur die Planung.
-      ...(perms.canManage ? freeWaypoints : []).map((w) => ({ id: `wp:${w.id}`, lat: w.lat, lng: w.lng, label: w.name, color: '#9e9e9e', ariaLabel: `Einrichtung ${w.name}` })),
+      ...(perms.canManage && showWaypoints ? freeWaypoints : []).map((w) => ({ id: `wp:${w.id}`, lat: w.lat, lng: w.lng, label: w.name, color: '#9e9e9e', ariaLabel: `Einrichtung ${w.name}` })),
       ...(live.canView ? liveMarkers(positions, people, user.id) : []),
       ...(importing?.stands ?? [])
         .filter((s) => s.use && !s.duplicate)
         .map((s) => ({ id: `import-${s.key}`, lat: s.lat, lng: s.lng, label: s.label, color: STAND_PREVIEW_COLOR, ariaLabel: `Neuer Stand ${s.label}` })),
     ],
-    [standList, people, me?.standId, live.canView, positions, user.id, importing, freeWaypoints, perms.canManage],
+    [standList, people, me?.standId, live.canView, positions, user.id, importing, freeWaypoints, perms.canManage, showWaypoints],
   );
   const areas = useMemo(
     () => [
@@ -240,208 +244,238 @@ function HuntView({ hunt }: { hunt: Hunt }) {
         </p>
       )}
 
-      <MyParticipation hunt={hunt} me={me} myStand={myStand} zones={zoneList} perms={perms} actions={actions} />
+      {preview ? (
+        <HuntPreview
+          hunt={hunt}
+          people={people}
+          stands={standList}
+          zones={zoneList}
+          reports={reportList}
+          boundaries={boundaries}
+          actions={actions}
+          onClose={() => setPreview(false)}
+        />
+      ) : (
+        <>
+        <MyParticipation hunt={hunt} me={me} myStand={myStand} zones={zoneList} perms={perms} actions={actions} />
 
-      <LiveCard hunt={hunt} me={me} people={people} positions={positions} live={live} />
+        <LiveCard hunt={hunt} me={me} people={people} positions={positions} live={live} />
 
-      {perms.canReport && isOpenOrRecent(hunt) && <ReportButtons huntId={hunt.id} stands={standList} myStandId={me?.standId ?? null} ownPos={ownPos} actions={actions} />}
+        {perms.canReport && isOpenOrRecent(hunt) && <ReportButtons huntId={hunt.id} stands={standList} myStandId={me?.standId ?? null} ownPos={ownPos} actions={actions} />}
 
-      <MapToolbar layer={layer} onLayer={setLayer} locate={locate} onLocate={setLocate} position={position} />
-      <LazyMap
-        className="h-[55vh] min-h-72"
-        layer={layer}
-        boundaries={boundaries}
-        areas={areas}
-        markers={markers}
-        draft={draft}
-        position={ownPos}
-        fit={fit}
-        fitKey={mode.kind === 'import' ? `import:${mode.fileName}` : `${hunt.id}:${boundaries.length}:${zoneList.length > 0}:${standList.length > 0}`}
-        onMapClick={onMapClick}
-        onMarkerClick={onMarkerClick}
-      />
+        <MapToolbar layer={layer} onLayer={setLayer} locate={locate} onLocate={setLocate} position={position} />
+        <LazyMap
+          className="h-[55vh] min-h-72"
+          layer={layer}
+          boundaries={boundaries}
+          areas={areas}
+          markers={markers}
+          draft={draft}
+        drawing={mode.kind === 'zone'}
+          position={ownPos}
+          fit={fit}
+          fitKey={mode.kind === 'import' ? `import:${mode.fileName}` : `${hunt.id}:${boundaries.length}:${zoneList.length > 0}:${standList.length > 0}`}
+          onMapClick={onMapClick}
+          onMarkerClick={onMarkerClick}
+        />
 
-      {mode.kind === 'stand' && (
-        <Card className="grid gap-3">
-          <h2 className="font-semibold">Stand setzen</h2>
-          {mode.point ? (
-            <StandForm
-              key={`${mode.point.lat},${mode.point.lng}`}
-              suggested={`Stand ${standList.length + 1}`}
-              pending={actions.createStand.isPending}
-              error={actions.createStand.error}
-              onCancel={() => setMode({ kind: 'view' })}
-              onSubmit={(label, category) =>
-                actions.createStand.mutate(
-                  { label, lat: mode.point!.lat, lng: mode.point!.lng, waypointId: null, category, description: '' },
-                  {
-                    onSuccess: () => {
-                      setMode({ kind: 'view' });
-                      setNotice(`${label} gesetzt.`);
+        {mode.kind === 'stand' && (
+          <Card className="grid gap-3">
+            <h2 className="font-semibold">Stand setzen</h2>
+            {mode.point ? (
+              <StandForm
+                key={`${mode.point.lat},${mode.point.lng}`}
+                suggested={`Stand ${standList.length + 1}`}
+                pending={actions.createStand.isPending}
+                error={actions.createStand.error}
+                onCancel={() => setMode({ kind: 'view' })}
+                onSubmit={(label, category) =>
+                  actions.createStand.mutate(
+                    { label, lat: mode.point!.lat, lng: mode.point!.lng, waypointId: null, category, description: '' },
+                    {
+                      onSuccess: () => {
+                        setMode({ kind: 'view' });
+                        setNotice(`${label} gesetzt.`);
+                      },
                     },
-                  },
-                )
-              }
-            />
-          ) : (
-            <>
-              <p className="text-sm">Tippe in die Karte, wo der Stand ist.</p>
-              <div className="flex flex-wrap gap-2">
-                {ownPos && (
-                  <Button variant="secondary" onClick={() => setMode({ kind: 'stand', point: { lat: ownPos.lat, lng: ownPos.lng } })}>
-                    <MapPin aria-hidden className="size-4" /> Meinen Standort verwenden
+                  )
+                }
+              />
+            ) : (
+              <>
+                <p className="text-sm">Tippe in die Karte, wo der Stand ist.</p>
+                <div className="flex flex-wrap gap-2">
+                  {ownPos && (
+                    <Button variant="secondary" onClick={() => setMode({ kind: 'stand', point: { lat: ownPos.lat, lng: ownPos.lng } })}>
+                      <MapPin aria-hidden className="size-4" /> Meinen Standort verwenden
+                    </Button>
+                  )}
+                  <Button variant="secondary" onClick={() => setMode({ kind: 'view' })}>
+                    Abbrechen
                   </Button>
-                )}
-                <Button variant="secondary" onClick={() => setMode({ kind: 'view' })}>
-                  Abbrechen
-                </Button>
-              </div>
-            </>
-          )}
-        </Card>
-      )}
+                </div>
+              </>
+            )}
+          </Card>
+        )}
 
-      {mode.kind === 'zone' && (
-        <ZoneDrawCard
-          points={mode.points}
-          onUndo={() => setMode({ kind: 'zone', points: mode.points.slice(0, -1) })}
-          onCancel={() => setMode({ kind: 'view' })}
-          pending={actions.createZone.isPending}
-          error={actions.createZone.error}
-          onSave={(name, kind) => {
-            const polygon = polygonFromPoints(mode.points);
-            if (!polygon) return;
-            actions.createZone.mutate(
-              { name, kind, geometry: polygon },
-              {
-                onSuccess: () => {
-                  setMode({ kind: 'view' });
-                  setNotice(`${ZONE_KINDS[kind]} „${name}“ gespeichert.`);
+        {mode.kind === 'zone' && (
+          <ZoneDrawCard
+            points={mode.points}
+            onUndo={() => setMode({ kind: 'zone', points: mode.points.slice(0, -1) })}
+            onCancel={() => setMode({ kind: 'view' })}
+            pending={actions.createZone.isPending}
+            error={actions.createZone.error}
+            onSave={(name, kind) => {
+              const polygon = polygonFromPoints(mode.points);
+              if (!polygon) return;
+              actions.createZone.mutate(
+                { name, kind, geometry: polygon },
+                {
+                  onSuccess: () => {
+                    setMode({ kind: 'view' });
+                    setNotice(`${ZONE_KINDS[kind]} „${name}“ gespeichert.`);
+                  },
                 },
-              },
-            );
-          }}
-        />
-      )}
+              );
+            }}
+          />
+        )}
 
-      {mode.kind === 'adopt' && (
-        <StandFromWaypointCard
-          key={mode.waypoint.id}
-          waypoint={mode.waypoint}
-          pending={actions.createStand.isPending}
-          error={actions.createStand.error}
-          onSave={(label, category) => adopt(mode.waypoint, label, category)}
-          onCancel={() => setMode({ kind: 'view' })}
-        />
-      )}
+        {mode.kind === 'adopt' && (
+          <StandFromWaypointCard
+            key={mode.waypoint.id}
+            waypoint={mode.waypoint}
+            pending={actions.createStand.isPending}
+            error={actions.createStand.error}
+            onSave={(label, category) => adopt(mode.waypoint, label, category)}
+            onCancel={() => setMode({ kind: 'view' })}
+          />
+        )}
 
-      {mode.kind === 'import' && (
-        <HuntImportCard
-          fileName={mode.fileName}
-          selection={mode.selection}
-          onChange={(selection) => setMode({ ...mode, selection })}
-          onSave={() => saveImport(mode.selection)}
-          onCancel={() => setMode({ kind: 'view' })}
-          pending={actions.importMap.isPending}
-          error={actions.importMap.error}
-        />
-      )}
+        {mode.kind === 'import' && (
+          <HuntImportCard
+            fileName={mode.fileName}
+            selection={mode.selection}
+            onChange={(selection) => setMode({ ...mode, selection })}
+            onSave={() => saveImport(mode.selection)}
+            onCancel={() => setMode({ kind: 'view' })}
+            pending={actions.importMap.isPending}
+            error={actions.importMap.error}
+          />
+        )}
 
-      {notice && mode.kind === 'view' && <FormSuccess>{notice}</FormSuccess>}
+        {notice && mode.kind === 'view' && <FormSuccess>{notice}</FormSuccess>}
 
-      {mode.kind === 'view' && perms.canManage && (
-        <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={() => startMode({ kind: 'stand', point: null })}>
-            <MapPin aria-hidden className="size-4" /> Stand setzen
-          </Button>
-          <Button variant="secondary" onClick={() => startMode({ kind: 'zone', points: [] })}>
-            <PencilLine aria-hidden className="size-4" /> Zone zeichnen
-          </Button>
-          <Button variant="secondary" onClick={() => fileInput.current?.click()}>
-            <FileUp aria-hidden className="size-4" /> Karte importieren
-          </Button>
-        </div>
-      )}
-      {mode.kind === 'view' && perms.canManage && <p className="-mt-2 text-xs text-muted">Import aus KML/KMZ (z. B. Google My Maps oder Google Earth), GPX oder GeoJSON: Flächen werden Zonen, Punkte werden Stände.</p>}
-      {mode.kind === 'view' && <FormError message={importError} />}
-      {perms.canManage && <input ref={fileInput} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={(e) => void onImportFile(e)} data-testid="hunt-import-file" />}
-
-      <PhasesCard
-        hunt={hunt}
-        phases={phases.data ?? []}
-        assignments={assignments.data ?? []}
-        participants={people}
-        stands={standList}
-        zones={zoneList}
-        perms={perms}
-        actions={actions}
-      />
-      <StandsCard stands={standList} participants={people} perms={perms} actions={actions} />
-      {perms.canManage && mode.kind === 'view' && (
-        <RevierWaypointsCard
-          waypoints={freeWaypoints}
-          onPick={(w) => startMode({ kind: 'adopt', waypoint: w })}
-          onAdoptMany={adoptMany}
-          pending={actions.importMap.isPending}
-          error={actions.importMap.error}
-        />
-      )}
-      <ZonesCard zones={zoneList} perms={perms} actions={actions} />
-      <ParticipantsCard hunt={hunt} participants={people} stands={standList} zones={zoneList} perms={perms} actions={actions} userId={user.id} />
-      {perms.canManage && (hunt.status === 'laufend' || hunt.status === 'beendet') && (
-        <HuntSummaryCard hunt={hunt} reports={reportList} participants={people} stands={standList} />
-      )}
-      <ReportsCard reports={reportList} stands={standList} perms={perms} actions={actions} />
-
-      {perms.canManage && (
-        <Card className="grid gap-3">
-          <h2 className="font-semibold">Jagdleitung</h2>
+        {mode.kind === 'view' && perms.canManage && (
           <div className="flex flex-wrap gap-2">
-            <Link to="/jagd/$huntId/bearbeiten" params={{ huntId: hunt.id }} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-medium">
-              <PencilLine aria-hidden className="size-4" /> Bearbeiten
-            </Link>
-            {hunt.status === 'geplant' && (
-              <Button onClick={() => actions.setStatus.mutate('laufend')}>
-                <Play aria-hidden className="size-4" /> Jagd starten
-              </Button>
-            )}
-            {hunt.status === 'laufend' && (
-              <Button onClick={() => actions.setStatus.mutate('beendet')}>
-                <Flag aria-hidden className="size-4" /> Jagd beenden
-              </Button>
-            )}
-            {(hunt.status === 'beendet' || hunt.status === 'abgesagt') && (
-              <Button variant="secondary" onClick={() => actions.setStatus.mutate('geplant')}>
-                <Undo2 aria-hidden className="size-4" /> Wieder öffnen
-              </Button>
-            )}
+            <Button variant="secondary" onClick={() => startMode({ kind: 'stand', point: null })}>
+              <MapPin aria-hidden className="size-4" /> Stand setzen
+            </Button>
+            <Button variant="secondary" onClick={() => startMode({ kind: 'zone', points: [] })}>
+              <PencilLine aria-hidden className="size-4" /> Zone zeichnen
+            </Button>
+            <Button variant="secondary" onClick={() => fileInput.current?.click()}>
+              <FileUp aria-hidden className="size-4" /> Karte importieren
+            </Button>
           </div>
-          {hunt.status === 'geplant' && (
-            <ConfirmButton
-              label={
-                <>
-                  <X aria-hidden className="size-4" /> Jagd absagen
-                </>
-              }
-              confirmText="Jagd absagen? Teilnehmer und Stände bleiben erhalten."
-              confirmLabel="Ja, absagen"
-              onConfirm={() => actions.setStatus.mutate('abgesagt')}
-            />
-          )}
-          {perms.canDelete && (
-            <ConfirmButton
-              label={
-                <>
-                  <Trash2 aria-hidden className="size-4" /> Jagd löschen
-                </>
-              }
-              confirmText="Die Jagd mit allen Ständen, Zonen, Teilnehmern und Meldungen endgültig löschen?"
-              confirmLabel="Endgültig löschen"
-              onConfirm={() => actions.remove.mutate(undefined, { onSuccess: () => navigate({ to: '/gruppe/$groupId', params: { groupId: hunt.groupId } }) })}
-            />
-          )}
-          <FormError message={errorText(actions.setStatus.error) ?? errorText(actions.remove.error)} />
-        </Card>
+        )}
+        {mode.kind === 'view' && perms.canManage && <p className="-mt-2 text-xs text-muted">Import aus KML/KMZ (z. B. Google My Maps oder Google Earth), GPX oder GeoJSON: Flächen werden Zonen, Punkte werden Stände.</p>}
+        {mode.kind === 'view' && <FormError message={importError} />}
+        {perms.canManage && <input ref={fileInput} type="file" accept={IMPORT_ACCEPT} className="hidden" onChange={(e) => void onImportFile(e)} data-testid="hunt-import-file" />}
+
+        <PhasesCard
+          hunt={hunt}
+          phases={phases.data ?? []}
+          assignments={assignments.data ?? []}
+          participants={people}
+          stands={standList}
+          zones={zoneList}
+          perms={perms}
+          actions={actions}
+        />
+        <StandsCard stands={standList} participants={people} perms={perms} actions={actions} />
+        {perms.canManage && mode.kind === 'view' && (
+          <RevierWaypointsCard
+            waypoints={freeWaypoints}
+            onPick={(w) => startMode({ kind: 'adopt', waypoint: w })}
+            onAdoptMany={adoptMany}
+            showOnMap={showWaypoints}
+            onShowOnMap={setShowWaypoints}
+            pending={actions.importMap.isPending}
+            error={actions.importMap.error}
+          />
+        )}
+        <ZonesCard zones={zoneList} perms={perms} actions={actions} />
+        <ParticipantsCard hunt={hunt} participants={people} stands={standList} zones={zoneList} perms={perms} actions={actions} userId={user.id} />
+        {perms.canManage && (hunt.status === 'laufend' || hunt.status === 'beendet') && (
+          <HuntSummaryCard hunt={hunt} reports={reportList} participants={people} stands={standList} />
+        )}
+        <ReportsCard reports={reportList} stands={standList} perms={perms} actions={actions} />
+
+        {perms.canManage && (
+          <Card className="grid gap-3">
+            <h2 className="font-semibold">Jagdleitung</h2>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/jagd/$huntId/bearbeiten" params={{ huntId: hunt.id }} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-line bg-surface px-4 text-sm font-medium">
+                <PencilLine aria-hidden className="size-4" /> Bearbeiten
+              </Link>
+              {hunt.status === 'geplant' && (
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    setMode({ kind: 'view' });
+                    setPreview(true);
+                    window.scrollTo?.({ top: 0 });
+                  }}
+                >
+                  <Eye aria-hidden className="size-4" /> Vorschau
+                </Button>
+              )}
+              {hunt.status === 'geplant' && (
+                <Button onClick={() => actions.setStatus.mutate('laufend')}>
+                  <Play aria-hidden className="size-4" /> Jagd starten
+                </Button>
+              )}
+              {hunt.status === 'laufend' && (
+                <Button onClick={() => actions.setStatus.mutate('beendet')}>
+                  <Flag aria-hidden className="size-4" /> Jagd beenden
+                </Button>
+              )}
+              {(hunt.status === 'beendet' || hunt.status === 'abgesagt') && (
+                <Button variant="secondary" onClick={() => actions.setStatus.mutate('geplant')}>
+                  <Undo2 aria-hidden className="size-4" /> Wieder öffnen
+                </Button>
+              )}
+            </div>
+            {hunt.status === 'geplant' && (
+              <ConfirmButton
+                label={
+                  <>
+                    <X aria-hidden className="size-4" /> Jagd absagen
+                  </>
+                }
+                confirmText="Jagd absagen? Teilnehmer und Stände bleiben erhalten."
+                confirmLabel="Ja, absagen"
+                onConfirm={() => actions.setStatus.mutate('abgesagt')}
+              />
+            )}
+            {perms.canDelete && (
+              <ConfirmButton
+                label={
+                  <>
+                    <Trash2 aria-hidden className="size-4" /> Jagd löschen
+                  </>
+                }
+                confirmText="Die Jagd mit allen Ständen, Zonen, Teilnehmern und Meldungen endgültig löschen?"
+                confirmLabel="Endgültig löschen"
+                onConfirm={() => actions.remove.mutate(undefined, { onSuccess: () => navigate({ to: '/gruppe/$groupId', params: { groupId: hunt.groupId } }) })}
+              />
+            )}
+            <FormError message={errorText(actions.setStatus.error) ?? errorText(actions.remove.error)} />
+          </Card>
+        )}
+        </>
       )}
     </Page>
   );

@@ -99,12 +99,15 @@ describe('Jagden', () => {
     expect(await screen.findByRole('button', { name: 'Marker Stand 1 · Anna' })).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole('button', { name: 'Zone zeichnen' }));
+    // Beim Zeichnen sind die Namen der Marker ausgeblendet.
+    expect(screen.getByTestId('map')).toHaveAttribute('data-drawing', 'true');
     const tap = screen.getByRole('button', { name: 'Karte antippen' });
     for (let i = 0; i < 3; i++) await userEvent.click(tap);
     await userEvent.type(screen.getByLabelText('Name der Zone'), 'Treiben 1');
     await userEvent.click(screen.getByRole('button', { name: 'Zone speichern' }));
     expect(await screen.findByText('Treiben „Treiben 1“ gespeichert.')).toBeInTheDocument();
     expect(screen.getByTestId('map')).toHaveAttribute('data-areas', '1');
+    expect(screen.getByTestId('map')).toHaveAttribute('data-drawing', 'false');
   });
 
   it('meldet „angeschossen“ als offene Nachsuche und erledigt sie', async () => {

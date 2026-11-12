@@ -29,7 +29,7 @@ vi.mock('../modules/map/MapView', async () => {
     default: (props: import('../modules/map/MapView').MapViewProps) =>
       createElement(
         'div',
-        { 'data-testid': 'map', 'data-layer': props.layer, 'data-boundaries': props.boundaries?.length ?? 0, 'data-areas': props.areas?.length ?? 0, 'data-draft': props.draft?.length ?? 0 },
+        { 'data-testid': 'map', 'data-layer': props.layer, 'data-boundaries': props.boundaries?.length ?? 0, 'data-areas': props.areas?.length ?? 0, 'data-draft': props.draft?.length ?? 0, 'data-drawing': String(props.drawing ?? false) },
         createElement(
           'button',
           {

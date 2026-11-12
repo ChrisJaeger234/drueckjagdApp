@@ -28,8 +28,11 @@ describe('Jagd planen mit Einrichtungen des Reviers', () => {
   it('übernimmt eine Einrichtung mit eigenem Namen und Art als Stand', async () => {
     const s = setup();
     renderApp(`/jagd/${s.huntId}`, s);
-    // Einrichtungen erscheinen grau in der Karte …
-    expect(await screen.findByRole('button', { name: 'Marker Langer Kanzel' })).toBeInTheDocument();
+    // Einrichtungen erscheinen erst auf Wunsch grau in der Karte …
+    const toggle = await screen.findByRole('checkbox', { name: 'Einrichtungen des Reviers grau in der Karte zeigen' });
+    expect(screen.queryByRole('button', { name: 'Marker Langer Kanzel' })).not.toBeInTheDocument();
+    await userEvent.click(toggle);
+    expect(screen.getByRole('button', { name: 'Marker Langer Kanzel' })).toBeInTheDocument();
     // … und als Liste.
     const list = screen.getByRole('list', { name: 'Einrichtungen aus dem Revier' });
     await userEvent.click(within(list).getByRole('button', { name: 'Langer Kanzel übernehmen' }));
@@ -54,6 +57,7 @@ describe('Jagd planen mit Einrichtungen des Reviers', () => {
   it('übernimmt auch per Antippen in der Karte', async () => {
     const s = setup();
     renderApp(`/jagd/${s.huntId}`, s);
+    await userEvent.click(await screen.findByRole('checkbox', { name: 'Einrichtungen des Reviers grau in der Karte zeigen' }));
     await userEvent.click(await screen.findByRole('button', { name: 'Marker Parkplatz Hof' }));
     expect(screen.getByLabelText('Art')).toHaveValue('parkplatz');
     await userEvent.click(screen.getByRole('button', { name: 'Als Stand übernehmen' }));
@@ -85,6 +89,36 @@ describe('Jagd planen mit Einrichtungen des Reviers', () => {
     expect(await screen.findByTestId('map')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Marker Langer Kanzel' })).not.toBeInTheDocument();
     expect(screen.queryByRole('list', { name: 'Einrichtungen aus dem Revier' })).not.toBeInTheDocument();
+  });
+
+  it('zeigt der Planung eine Vorschau der laufenden Jagd, ohne etwas zu speichern', async () => {
+    const s = setup();
+    const kanzel = s.hunts.seedStand(s.huntId, 'Langer Kanzel');
+    const eva = 'u-eva';
+    s.profiles.seed(eva, { displayName: 'Eva', username: 'eva' });
+    s.hunts.seedParticipant(s.huntId, eva, 'schuetze', kanzel);
+    renderApp(`/jagd/${s.huntId}`, s);
+    await userEvent.click(await screen.findByRole('button', { name: 'Vorschau' }));
+
+    const banner = screen.getByRole('region', { name: 'Vorschau' });
+    expect(within(banner).getByLabelText('Ansicht als')).toHaveDisplayValue('Eva (Schütze)');
+    expect(screen.getByText('Dein Stand: Langer Kanzel')).toBeInTheDocument();
+    // Keine Planungswerkzeuge und keine grauen Einrichtungen.
+    expect(screen.queryByRole('list', { name: 'Einrichtungen aus dem Revier' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Marker Parkplatz Hof' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Jagd starten' })).not.toBeInTheDocument();
+
+    await userEvent.click(screen.getByRole('button', { name: 'Anblick' }));
+    const submit = screen.getAllByRole('button').find((b) => /melden|senden/i.test(b.textContent ?? ''));
+    await userEvent.click(submit!);
+    expect(await screen.findByText(/Vorschau: Die Meldung „Anblick“ würde jetzt an alle Teilnehmer gehen/)).toBeInTheDocument();
+    expect(s.hunts.reportList).toHaveLength(0);
+
+    await userEvent.selectOptions(within(banner).getByLabelText('Ansicht als'), 'beispiel:treiber');
+    expect(screen.queryByText(/Dein Stand/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Vorschau beenden' }));
+    expect(screen.getByRole('button', { name: 'Jagd starten' })).toBeInTheDocument();
+    expect(s.hunts.hunts[0]!.status).toBe('geplant');
   });
 
   it('setzt einen neuen Stand mit Art', async () => {

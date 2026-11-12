@@ -130,7 +130,22 @@ const REPORT_ICONS: Record<ReportKind, typeof Crosshair> = {
   sonstiges: MessageSquare,
 };
 
-export function ReportButtons({ huntId, stands, myStandId, ownPos, actions }: { huntId: string; stands: Stand[]; myStandId: string | null; ownPos: OwnPosition | null; actions: HuntActions }) {
+export function ReportButtons({
+  huntId,
+  stands,
+  myStandId,
+  ownPos,
+  actions,
+  preview = false,
+}: {
+  huntId: string;
+  stands: Stand[];
+  myStandId: string | null;
+  ownPos: OwnPosition | null;
+  actions: HuntActions;
+  /** Vorschau der Planung: Meldungen werden nicht gesendet. */
+  preview?: boolean;
+}) {
   const [kind, setKind] = useState<ReportKind | null>(null);
   const [done, setDone] = useState<string | null>(null);
   return (
@@ -167,6 +182,11 @@ export function ReportButtons({ huntId, stands, myStandId, ownPos, actions }: { 
           ownPos={ownPos}
           onCancel={() => setKind(null)}
           onSubmit={(input) => {
+            if (preview) {
+              setKind(null);
+              setDone(`Vorschau: Die Meldung „${REPORT_KINDS[input.kind]}“ würde jetzt an alle Teilnehmer gehen. Es wurde nichts gesendet.`);
+              return;
+            }
             // Die Meldung geht sofort in die Warteschlange; ohne Netz wird sie später gesendet.
             actions.createReport.mutate(
               { huntId, input },
