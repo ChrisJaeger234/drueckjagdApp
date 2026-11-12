@@ -311,6 +311,10 @@ export class FakeReviere implements ReviereService {
     const id = this.seedWaypoint(revierId, { ...input, createdBy: this.auth.user!.id });
     return this.waypointList.find((w) => w.id === id)!;
   }
+  async createWaypoints(revierId: string, inputs: WaypointInput[]) {
+    this.requireEditor(revierId);
+    for (const input of inputs) this.seedWaypoint(revierId, { ...input, createdBy: this.auth.user!.id });
+  }
   async updateWaypoint(waypointId: string, input: WaypointInput) {
     const w = this.waypointList.find((x) => x.id === waypointId);
     if (!w) throw new AppError('Der Eintrag wurde nicht gefunden.', 'notFound');

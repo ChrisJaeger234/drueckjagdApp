@@ -61,6 +61,14 @@ export function useRevierActions() {
       mutationFn: ({ waypointId, input }: { waypointId: string; input: WaypointInput }) => reviere.updateWaypoint(waypointId, input),
       onSuccess,
     }),
+    importFile: useMutation({
+      mutationFn: async ({ revierId, boundary, creates, updates }: { revierId: string; boundary: Boundary | null; creates: WaypointInput[]; updates: { id: string; input: WaypointInput }[] }) => {
+        if (boundary) await reviere.saveBoundary(revierId, boundary);
+        await reviere.createWaypoints(revierId, creates);
+        for (const u of updates) await reviere.updateWaypoint(u.id, u.input);
+      },
+      onSettled: onSuccess,
+    }),
     removeWaypoint: useMutation({ mutationFn: (waypointId: string) => reviere.removeWaypoint(waypointId), onSuccess }),
   };
 }

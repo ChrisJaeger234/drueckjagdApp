@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 
 /// Kategorien von Wegpunkten / jagdlichen Einrichtungen
-/// (entspricht `public.waypoint_category`, erweitert in Migration 0008).
+/// (entspricht `public.waypoint_category`, erweitert in Migration 0008 und 0017).
 enum WaypointCategory {
   hochsitz('hochsitz', 'Hochsitz', Icons.chair_alt_outlined),
-  kanzel('kanzel', 'Kanzel', Icons.cabin_outlined),
-  drueckjagdbock('drueckjagdbock', 'Drückjagdbock', Icons.deck_outlined),
+  kanzel('kanzel', 'Kanzel geschlossen', Icons.cabin_outlined),
+  kanzelOffen('kanzel_offen', 'Kanzel offen', Icons.roofing_outlined),
+  fahrbareKanzel('fahrbare_kanzel', 'Fahrbare Kanzel', Icons.rv_hookup_outlined),
+  drueckjagdbock('drueckjagdbock', 'Drückjagdbock ohne Dach', Icons.deck_outlined),
   ansitzleiter('ansitzleiter', 'Ansitzleiter', Icons.stairs_outlined),
   kirrung('kirrung', 'Kirrung', Icons.grain),
   fuetterung('fuetterung', 'Fütterung', Icons.agriculture_outlined),

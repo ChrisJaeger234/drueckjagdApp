@@ -130,7 +130,16 @@ export async function kmlFromKmz(bytes: Uint8Array): Promise<string> {
  * Die endgültige Prüfung und Reparatur übernimmt die Datenbank (Migration 0009).
  */
 export function parseBoundaryFile(fileName: string, text: string): MultiPolygon {
-  const fc = featuresFromText(fileName, text);
+  const boundary = boundaryFromFeatures(featuresFromText(fileName, text), { closeLines: true });
+  if (!boundary) throw new BoundaryImportError('In der Datei wurde keine Fläche gefunden (Polygon oder geschlossene Linie).');
+  return boundary;
+}
+
+/**
+ * Alle Flächen einer FeatureCollection als ein MultiPolygon, `null` ohne Fläche.
+ * Mit `closeLines` werden auch Linien zu Flächen geschlossen.
+ */
+export function boundaryFromFeatures(fc: FeatureCollection, { closeLines = false } = {}): MultiPolygon | null {
   const polygons: Position[][][] = [];
   const add = (g: Geometry | null) => {
     if (!g) return;
@@ -142,10 +151,10 @@ export function parseBoundaryFile(fileName: string, text: string): MultiPolygon 
         g.coordinates.forEach((p) => polygons.push(p.map((r) => closeRing(r.map(to2d)))));
         break;
       case 'LineString':
-        if (g.coordinates.length >= 3) polygons.push([closeRing(g.coordinates.map(to2d))]);
+        if (closeLines && g.coordinates.length >= 3) polygons.push([closeRing(g.coordinates.map(to2d))]);
         break;
       case 'MultiLineString':
-        g.coordinates.forEach((l) => l.length >= 3 && polygons.push([closeRing(l.map(to2d))]));
+        if (closeLines) g.coordinates.forEach((l) => l.length >= 3 && polygons.push([closeRing(l.map(to2d))]));
         break;
       case 'GeometryCollection':
         g.geometries.forEach(add);
@@ -153,8 +162,7 @@ export function parseBoundaryFile(fileName: string, text: string): MultiPolygon 
     }
   };
   fc.features.forEach((f) => add(f.geometry));
-  if (polygons.length === 0) throw new BoundaryImportError('In der Datei wurde keine Fläche gefunden (Polygon oder geschlossene Linie).');
-  return { type: 'MultiPolygon', coordinates: polygons };
+  return polygons.length > 0 ? { type: 'MultiPolygon', coordinates: polygons } : null;
 }
 
 function toCollection(json: unknown): FeatureCollection {

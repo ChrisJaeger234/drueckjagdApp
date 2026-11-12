@@ -58,8 +58,8 @@ describe('Reviere', () => {
     renderApp(`/revier/${id}`, s);
     await screen.findByRole('button', { name: 'Datei importieren' });
     const input = screen.getByTestId('boundary-file');
-    await userEvent.upload(input, new File(['{"type":"Point","coordinates":[7,51]}'], 'punkt.geojson'));
-    expect(await screen.findByRole('alert')).toHaveTextContent('keine Fläche');
+    await userEvent.upload(input, new File(['{"type":"LineString","coordinates":[[7,51],[7.1,51.1]]}'], 'linie.geojson'));
+    expect(await screen.findByRole('alert')).toHaveTextContent('weder Flächen noch Punkte');
     const polygon = { type: 'Polygon', coordinates: [[[7.24, 51.16], [7.26, 51.16], [7.25, 51.18], [7.24, 51.16]]] };
     await userEvent.upload(input, new File([JSON.stringify(polygon)], 'revier.geojson'));
     expect(await screen.findByText('Reviergrenze aus „revier.geojson“ übernommen.')).toBeInTheDocument();
@@ -101,7 +101,7 @@ describe('Reviere', () => {
     s.reviere.seedWaypoint(id, { name: 'Kanzel Eiche', category: 'kanzel' });
     renderApp(`/revier/${id}`, s);
     await userEvent.click(await screen.findByRole('button', { name: 'Marker Kanzel Eiche' }));
-    expect(screen.getAllByText('Kanzel').length).toBeGreaterThan(0);
+    expect(screen.getAllByText('Kanzel geschlossen').length).toBeGreaterThan(0);
     expect(screen.queryByRole('button', { name: 'Bearbeiten' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Einrichtung setzen' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Grenze zeichnen' })).not.toBeInTheDocument();
