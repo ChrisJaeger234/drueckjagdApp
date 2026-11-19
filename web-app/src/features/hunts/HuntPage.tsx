@@ -19,6 +19,7 @@ import { categoryColor, type Waypoint, type WaypointCategory } from '../reviere/
 import { HuntSummaryCard } from './HuntSummary';
 import { HuntPreview } from './HuntPreview';
 import { PhasesCard } from './PhasesCard';
+import { ZoneColorChoice } from './ZoneColorChoice';
 import { RevierWaypointsCard, StandCategorySelect, StandFromWaypointCard } from './StandFromWaypoint';
 import { formatHuntTime } from './format';
 import { ParticipantsCard, ReportsCard, StandsCard, ZonesCard, MyParticipation, ReportButtons } from './huntSections';
@@ -333,11 +334,11 @@ function HuntView({ hunt }: { hunt: Hunt }) {
             onCancel={() => setMode({ kind: 'view' })}
             pending={actions.createZone.isPending}
             error={actions.createZone.error}
-            onSave={(name, kind) => {
+            onSave={(name, kind, color) => {
               const polygon = polygonFromPoints(mode.points);
               if (!polygon) return;
               actions.createZone.mutate(
-                { name, kind, geometry: polygon },
+                { name, kind, geometry: polygon, color },
                 {
                   onSuccess: () => {
                     setMode({ kind: 'view' });
@@ -552,12 +553,13 @@ function ZoneDrawCard({
   points: Position[];
   onUndo: () => void;
   onCancel: () => void;
-  onSave: (name: string, kind: ZoneKind) => void;
+  onSave: (name: string, kind: ZoneKind, color: string | null) => void;
   pending: boolean;
   error: unknown;
 }) {
   const [name, setName] = useState('');
   const [kind, setKind] = useState<ZoneKind>('treiben');
+  const [color, setColor] = useState<string | null>(null);
   const ready = points.length >= 3 && name.trim().length > 0;
   return (
     <Card className="grid gap-3">
@@ -576,9 +578,13 @@ function ZoneDrawCard({
         </select>
       </label>
       <Field label="Name der Zone" placeholder="z. B. Treiben 1 Eichenhang" value={name} onChange={(e) => setName(e.target.value)} />
+      <div className="grid gap-1 text-sm font-medium">
+        Farbe
+        <ZoneColorChoice label="Farbe der neuen Zone" kind={kind} value={color} onChange={setColor} />
+      </div>
       <FormError message={errorText(error)} />
       <div className="flex flex-wrap gap-2">
-        <Button disabled={!ready || pending} onClick={() => onSave(name, kind)}>
+        <Button disabled={!ready || pending} onClick={() => onSave(name, kind, color)}>
           Zone speichern
         </Button>
         <Button variant="secondary" disabled={points.length === 0} onClick={onUndo}>

@@ -1,4 +1,4 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { FakeGroups, FakeHunts, FakeProfiles } from '../../test/fakes';
@@ -117,5 +117,11 @@ describe('Zonen für Treiber', () => {
     expect(s.hunts.zoneList.find((z) => z.id === 'z-a')!.color).toBeNull();
     await userEvent.click(within(colors).getByRole('button', { name: 'Wie Art' }));
     await waitFor(() => expect(s.hunts.zoneList.find((z) => z.id === 'z-b')!.color).toBeNull());
+
+    // Eigene Farbe wird ohne Verlassen des Feldes gespeichert (Handy), nur der letzte Wert.
+    const own = within(screen.getByRole('group', { name: 'Farbe für Treiben Bach' })).getByLabelText('Eigene Farbe für Treiben Bach');
+    fireEvent.change(own, { target: { value: '#123456' } });
+    fireEvent.change(own, { target: { value: '#abcdef' } });
+    await waitFor(() => expect(s.hunts.zoneList.find((z) => z.id === 'z-b')!.color).toBe('#abcdef'));
   });
 });

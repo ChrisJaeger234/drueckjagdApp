@@ -16,7 +16,6 @@ import {
   newReport,
   REPORT_KINDS,
   SELF_ASSIGNABLE_ROLES,
-  ZONE_COLORS,
   ZONE_KINDS,
   zoneColor,
   zoneIdsOf,
@@ -34,6 +33,7 @@ import {
 import type { HuntActions } from './useHunts';
 import { CATEGORY_LABEL } from '../reviere/revierModel';
 import { ZonePicker } from './ZonePicker';
+import { ZoneColorChoice } from './ZoneColorChoice';
 
 const errorText = (e: unknown) => (e ? mapError(e).message : null);
 const select = 'min-h-10 rounded-xl border border-line bg-surface px-2 text-sm';
@@ -362,9 +362,6 @@ export function StandsCard({ stands, participants, perms, actions }: { stands: S
 
 // ------------------------------------------------------------ Zonen
 
-/** Auswahl für eigene Zonenfarben; die Farbe der Zonenart bleibt der Standard. */
-export const ZONE_PALETTE = ['#2f7d32', '#7cb342', '#00897b', '#1f5c8a', '#4fc3f7', '#5e35b1', '#d81b60', '#b3261e', '#d9480f', '#f9a825', '#795548', '#212121'];
-
 export function ZonesCard({ zones, perms, actions }: { zones: Zone[]; perms: HuntPermissions; actions: HuntActions }) {
   const [coloring, setColoring] = useState<string | null>(null);
   if (zones.length === 0 && !perms.canManage) return null;
@@ -384,9 +381,10 @@ export function ZonesCard({ zones, perms, actions }: { zones: Zone[]; perms: Hun
                     aria-label={`Farbe von ${z.name} ändern`}
                     aria-expanded={coloring === z.id}
                     onClick={() => setColoring(coloring === z.id ? null : z.id)}
-                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface"
+                    className="inline-flex min-h-10 shrink-0 items-center gap-1.5 rounded-xl border border-line bg-surface px-2 text-sm"
                   >
                     <span className="size-5 rounded-md border border-black/10" style={{ background: zoneColor(z) }} />
+                    Farbe
                   </button>
                 ) : (
                   <span className="size-3 shrink-0 rounded-sm" style={{ background: zoneColor(z) }} />
@@ -398,48 +396,15 @@ export function ZonesCard({ zones, perms, actions }: { zones: Zone[]; perms: Hun
                 )}
               </div>
               {perms.canManage && coloring === z.id && (
-                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2" role="group" aria-label={`Farbe für ${z.name}`}>
-                  <button
-                    type="button"
-                    aria-pressed={z.color === null}
-                    onClick={() => actions.setZoneColor.mutate({ id: z.id, color: null })}
-                    className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-2 text-sm ${z.color === null ? 'border-primary ring-2 ring-primary' : 'border-line'}`}
-                  >
-                    <span className="size-5 rounded-md" style={{ background: ZONE_COLORS[z.kind] }} />
-                    Wie Art
-                  </button>
-                  {ZONE_PALETTE.map((c) => {
-                    const active = z.color?.toLowerCase() === c;
-                    return (
-                      <button
-                        key={c}
-                        type="button"
-                        aria-label={`Farbe ${c}`}
-                        aria-pressed={active}
-                        onClick={() => actions.setZoneColor.mutate({ id: z.id, color: c })}
-                        className={`size-10 rounded-xl border ${active ? 'border-primary ring-2 ring-primary' : 'border-line'}`}
-                        style={{ background: c }}
-                      />
-                    );
-                  })}
-                  <label className="inline-flex min-h-10 items-center gap-1 text-sm">
-                    Eigene
-                    <input
-                      type="color"
-                      aria-label={`Eigene Farbe für ${z.name}`}
-                      defaultValue={zoneColor(z)}
-                      // Erst beim Schließen des Farbwählers speichern, nicht bei jeder Bewegung.
-                      onBlur={(e) => e.target.value.toLowerCase() !== zoneColor(z).toLowerCase() && actions.setZoneColor.mutate({ id: z.id, color: e.target.value.toLowerCase() })}
-                      className="h-10 w-12 cursor-pointer rounded-xl border border-line bg-surface"
-                    />
-                  </label>
+                <div className="rounded-xl border border-line p-2">
+                  <ZoneColorChoice label={`Farbe für ${z.name}`} kind={z.kind} value={z.color} onChange={(color) => actions.setZoneColor.mutate({ id: z.id, color })} />
                 </div>
               )}
             </li>
           ))}
         </ul>
       )}
-      {perms.canManage && zones.length > 0 && <p className="mt-2 text-xs text-muted">Tippe auf das Farbfeld, um einer Zone eine eigene Farbe zu geben.</p>}
+      {perms.canManage && zones.length > 0 && <p className="mt-2 text-xs text-muted">Tippe bei einer Zone auf „Farbe“, um ihr eine eigene Farbe zu geben.</p>}
       <FormError message={errorText(actions.removeZone.error) ?? errorText(actions.setZoneColor.error)} />
     </Card>
   );

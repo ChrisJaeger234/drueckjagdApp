@@ -8,7 +8,7 @@ begin;
 create extension if not exists pgtap with schema extensions;
 set search_path = public, extensions;
 
-select plan(12);
+select plan(13);
 
 create or replace function pg_temp.login(p_user uuid) returns void
 language plpgsql as $$
@@ -57,6 +57,7 @@ insert into ids select 'PH1', id from t;
 
 -- Zonenfarbe (Spalte gibt es seit 0010)
 select lives_ok(format($$update public.hunt_zones set color = '#5e35b1' where id = %L$$, pg_temp.id('ZB')), 'Jagdleitung setzt eine eigene Zonenfarbe');
+select is((select color from public.hunt_zones where id = pg_temp.id('ZB')), '#5e35b1', 'Farbe ist gespeichert');
 select is((select color from public.hunt_zones where id = pg_temp.id('ZA')), null, 'andere Zone derselben Art bleibt bei der Art-Farbe');
 
 -- Weitere Zonen: ohne Phase und je Phase
