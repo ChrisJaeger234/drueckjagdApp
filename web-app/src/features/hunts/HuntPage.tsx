@@ -23,7 +23,7 @@ import { RevierWaypointsCard, StandCategorySelect, StandFromWaypointCard } from 
 import { formatHuntTime } from './format';
 import { ParticipantsCard, ReportsCard, StandsCard, ZonesCard, MyParticipation, ReportButtons } from './huntSections';
 import { StatusBadge } from './HuntList';
-import { huntPermissions, isOpenFollowUp, livePermissions, ZONE_KINDS, zoneColor, type Hunt, type ZoneKind } from './huntModel';
+import { huntPermissions, isOpenFollowUp, livePermissions, ZONE_KINDS, zoneColor, zoneIdsOf, type Hunt, type ZoneKind } from './huntModel';
 import { useHunt, useHuntActions, useHuntDetails, useHuntPositions } from './useHunts';
 import { LiveCard, liveMarkers } from '../live/LiveCard';
 import { huntImportFrom } from './huntImport';
@@ -52,7 +52,7 @@ const IMPORT_ACCEPT = '.kml,.kmz,.gpx,.geojson,.json,application/vnd.google-eart
 function HuntView({ hunt }: { hunt: Hunt }) {
   const user = useUser();
   const { data: mine } = useMyGroup(hunt.groupId);
-  const { participants, stands, zones, reports, phases, assignments } = useHuntDetails(hunt.id);
+  const { participants, stands, zones, reports, phases, assignments, extraZones } = useHuntDetails(hunt.id);
   const actions = useHuntActions(hunt.id);
   const navigate = useNavigate();
   const revierIds = useMemo(() => (hunt.revierId ? [hunt.revierId] : []), [hunt.revierId]);
@@ -64,6 +64,12 @@ function HuntView({ hunt }: { hunt: Hunt }) {
   const zoneList = useMemo(() => zones.data ?? [], [zones.data]);
   const reportList = useMemo(() => reports.data ?? [], [reports.data]);
   const me = people.find((p) => p.userId === user.id) ?? null;
+  // Weitere Zonen (Migration 0018); null, solange die Datenbank sie nicht kennt.
+  const extras = useMemo(() => (extraZones.data === undefined ? [] : extraZones.data), [extraZones.data]);
+  const myZoneIds = useMemo(
+    () => (me ? zoneIdsOf(me.zoneId, extras ?? [], me.id, hunt.currentPhaseId ?? null, zoneList) : []),
+    [me, extras, hunt.currentPhaseId, zoneList],
+  );
   const perms = huntPermissions(user.id, mine?.role ?? null, me);
   const live = livePermissions(hunt, mine?.role ?? null, me);
   const { data: positions = [] } = useHuntPositions(hunt.id, live.canView);
@@ -141,10 +147,10 @@ function HuntView({ hunt }: { hunt: Hunt }) {
   );
   const areas = useMemo(
     () => [
-      ...zoneList.map((z) => ({ id: z.id, geometry: z.geometry, color: zoneColor(z) })),
+      ...zoneList.map((z) => ({ id: z.id, geometry: z.geometry, color: zoneColor(z), highlight: myZoneIds.includes(z.id) })),
       ...(importing?.zones ?? []).filter((z) => z.use).map((z) => ({ id: `import-${z.key}`, geometry: z.geometry, color: zoneColor(z) })),
     ],
-    [zoneList, importing],
+    [zoneList, importing, myZoneIds],
   );
   const fit = useMemo(
     () =>
@@ -250,6 +256,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           people={people}
           stands={standList}
           zones={zoneList}
+          extras={extras ?? []}
           reports={reportList}
           boundaries={boundaries}
           actions={actions}
@@ -257,7 +264,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
         />
       ) : (
         <>
-        <MyParticipation hunt={hunt} me={me} myStand={myStand} zones={zoneList} perms={perms} actions={actions} />
+        <MyParticipation hunt={hunt} me={me} myStand={myStand} zones={zoneList} myZoneIds={myZoneIds} perms={perms} actions={actions} />
 
         <LiveCard hunt={hunt} me={me} people={people} positions={positions} live={live} />
 
@@ -391,6 +398,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           participants={people}
           stands={standList}
           zones={zoneList}
+          extras={extras}
           perms={perms}
           actions={actions}
         />
@@ -407,7 +415,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           />
         )}
         <ZonesCard zones={zoneList} perms={perms} actions={actions} />
-        <ParticipantsCard hunt={hunt} participants={people} stands={standList} zones={zoneList} perms={perms} actions={actions} userId={user.id} />
+        <ParticipantsCard hunt={hunt} participants={people} stands={standList} zones={zoneList} extras={extras} perms={perms} actions={actions} userId={user.id} />
         {perms.canManage && (hunt.status === 'laufend' || hunt.status === 'beendet') && (
           <HuntSummaryCard hunt={hunt} reports={reportList} participants={people} stands={standList} />
         )}

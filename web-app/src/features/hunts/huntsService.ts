@@ -2,6 +2,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { AppError, check, guard, unwrap } from '../../lib/errors';
 import {
   ASSIGNMENT_COLUMNS,
+  EXTRA_ZONE_COLUMNS,
+  extraZoneFromRow,
+  type ExtraZone,
+  type ExtraZoneRow,
   PHASE_COLUMNS,
   assignmentFromRow,
   phaseFromRow,
@@ -65,6 +69,8 @@ export interface HuntsService {
 
   zones(huntId: string): Promise<Zone[]>;
   createZone(huntId: string, input: ZoneInput): Promise<void>;
+  /** Eigene Farbe der Zone (#rrggbb), null = Farbe der Zonenart. */
+  setZoneColor(zoneId: string, color: string | null): Promise<void>;
   removeZone(zoneId: string): Promise<void>;
 
   stands(huntId: string): Promise<Stand[]>;
@@ -90,7 +96,15 @@ export interface HuntsService {
   /** Schaltet die Phase aktiv und übernimmt ihre Zuteilung für alle Teilnehmer. */
   activatePhase(huntId: string, phaseId: string): Promise<void>;
   setAssignment(huntId: string, a: PhaseAssignment): Promise<void>;
+
+  /** Weitere Zonen je Teilnehmer (Migration 0018); null = Migration fehlt noch, nur eine Zone möglich. */
+  extraZones(huntId: string): Promise<ExtraZone[] | null>;
+  addExtraZone(huntId: string, e: Omit<ExtraZone, 'id'>): Promise<void>;
+  removeExtraZone(id: string): Promise<void>;
 }
+
+/** Tabelle (noch) nicht vorhanden: PostgREST kennt sie nicht bzw. Postgres meldet undefined_table. */
+const isMissingTable = (e: { code?: string } | null) => e?.code === 'PGRST205' || e?.code === '42P01';
 
 const FORBIDDEN = () => new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
 const requireAny = (rows: unknown[]) => {
@@ -156,6 +170,7 @@ export function createSupabaseHuntsService(client: SupabaseClient): HuntsService
       ),
     createZone: (huntId, { name, kind, geometry, color }) =>
       guard(async () => check(await client.from('hunt_zones').insert({ hunt_id: huntId, name: name.trim(), kind, boundary_data: geometry, color: color ?? null }))),
+    setZoneColor: (zoneId, color) => guard(() => updateOne('hunt_zones', zoneId, { color })),
     removeZone: (zoneId) => guard(() => deleteOne('hunt_zones', zoneId)),
 
     stands: (huntId) =>
@@ -230,5 +245,21 @@ export function createSupabaseHuntsService(client: SupabaseClient): HuntsService
           );
         }
       }),
+
+    extraZones: (huntId) =>
+      guard(async () => {
+        const res = await client.from('hunt_participant_zones').select(EXTRA_ZONE_COLUMNS).eq('hunt_id', huntId).returns<ExtraZoneRow[]>();
+        if (isMissingTable(res.error)) return null;
+        return unwrap(res).map(extraZoneFromRow);
+      }),
+    addExtraZone: (huntId, e) =>
+      guard(async () => {
+        const { error } = await client
+          .from('hunt_participant_zones')
+          .insert({ hunt_id: huntId, participant_id: e.participantId, zone_id: e.zoneId, phase_id: e.phaseId });
+        // Schon vorhanden (doppelt getippt): kein Fehler.
+        if (error && error.code !== '23505') throw error;
+      }),
+    removeExtraZone: (id) => guard(() => deleteOne('hunt_participant_zones', id)),
   };
 }

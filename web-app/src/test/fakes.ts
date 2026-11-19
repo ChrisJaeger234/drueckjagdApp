@@ -14,6 +14,7 @@ import {
   sortPhases,
   type Phase,
   type PhaseAssignment,
+  type ExtraZone,
   sortParticipants,
   sortStands,
   type Hunt,
@@ -452,8 +453,15 @@ export class FakeHunts implements HuntsService {
     this.requireManage(huntId);
     this.zoneList.push({ id: `z${++this.seq}`, huntId, name, kind, description: '', color: color ?? null, geometry });
   }
+  async setZoneColor(zoneId: string, color: string | null) {
+    const z = this.zoneList.find((x) => x.id === zoneId);
+    if (!z) throw new AppError('Dafür fehlen dir die Berechtigungen.', 'forbidden');
+    this.requireManage(z.huntId);
+    z.color = color;
+  }
   async removeZone(zoneId: string) {
     this.zoneList = this.zoneList.filter((z) => z.id !== zoneId);
+    this.extraZoneList = this.extraZoneList.filter((e) => e.zoneId !== zoneId);
   }
   async stands(huntId: string) {
     return clone(sortStands(this.standList.filter((s) => s.huntId === huntId)));
@@ -526,6 +534,7 @@ export class FakeHunts implements HuntsService {
     if (p) this.requireManage(p.huntId);
     this.phaseList = this.phaseList.filter((x) => x.id !== phaseId);
     this.assignmentList = this.assignmentList.filter((a) => a.phaseId !== phaseId);
+    this.extraZoneList = this.extraZoneList.filter((e) => e.phaseId !== phaseId);
     this.hunts.forEach((h) => h.currentPhaseId === phaseId && (h.currentPhaseId = null));
   }
   async activatePhase(huntId: string, phaseId: string) {
@@ -548,6 +557,23 @@ export class FakeHunts implements HuntsService {
     }
   }
 
+  /** Weitere Zonen (Migration 0018); `extraZonesMissing` simuliert eine Datenbank ohne die Migration. */
+  extraZoneList: (ExtraZone & { huntId: string })[] = [];
+  extraZonesMissing = false;
+  async extraZones(huntId: string) {
+    if (this.extraZonesMissing) return null;
+    return clone(this.extraZoneList.filter((e) => e.huntId === huntId).map((e) => ({ id: e.id, participantId: e.participantId, zoneId: e.zoneId, phaseId: e.phaseId })));
+  }
+  async addExtraZone(huntId: string, e: Omit<ExtraZone, 'id'>) {
+    this.requireManage(huntId);
+    if (this.extraZoneList.some((x) => x.participantId === e.participantId && x.phaseId === e.phaseId && x.zoneId === e.zoneId)) return;
+    this.extraZoneList.push({ ...e, id: `ez${++this.seq}`, huntId });
+  }
+  async removeExtraZone(id: string) {
+    const e = this.extraZoneList.find((x) => x.id === id);
+    if (e) this.requireManage(e.huntId);
+    this.extraZoneList = this.extraZoneList.filter((x) => x.id !== id);
+  }
 }
 
 export class FakeChat implements ChatService {

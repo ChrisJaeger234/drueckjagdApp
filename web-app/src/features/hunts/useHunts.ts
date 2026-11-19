@@ -2,14 +2,14 @@ import { useMutation, useQueries, useQuery, useQueryClient } from '@tanstack/rea
 import { useServices } from '../../app/services';
 import { REPORT_MUTATION_KEY, type ReportVariables } from '../../lib/offline';
 import { AppError, mapError } from '../../lib/errors';
-import { sortPhases, type HuntDraft, type HuntRole, type HuntStatus, type Participant, type Phase, type PhaseAssignment, type StandInput, type ZoneInput } from './huntModel';
+import { extraZonesOf, sortPhases, type ExtraZone, type HuntDraft, type HuntRole, type HuntStatus, type Participant, type Phase, type PhaseAssignment, type StandInput, type ZoneInput } from './huntModel';
 
 export const huntKeys = {
   root: ['hunts'] as const,
   all: () => ['hunts', 'all'] as const,
   group: (groupId: string) => ['hunts', 'group', groupId] as const,
   one: (huntId: string) => ['hunts', 'one', huntId] as const,
-  part: (huntId: string, part: 'participants' | 'stands' | 'zones' | 'reports' | 'positions' | 'phases' | 'assignments') => ['hunts', 'one', huntId, part] as const,
+  part: (huntId: string, part: 'participants' | 'stands' | 'zones' | 'reports' | 'positions' | 'phases' | 'assignments' | 'extraZones') => ['hunts', 'one', huntId, part] as const,
 };
 
 export function useAllHunts() {
@@ -35,7 +35,8 @@ export function useHuntDetails(huntId: string) {
   const reports = useQuery({ queryKey: huntKeys.part(huntId, 'reports'), queryFn: () => hunts.reports(huntId) });
   const phases = useQuery({ queryKey: huntKeys.part(huntId, 'phases'), queryFn: () => hunts.phases(huntId) });
   const assignments = useQuery({ queryKey: huntKeys.part(huntId, 'assignments'), queryFn: () => hunts.assignments(huntId) });
-  return { participants, stands, zones, reports, phases, assignments };
+  const extraZones = useQuery({ queryKey: huntKeys.part(huntId, 'extraZones'), queryFn: () => hunts.extraZones(huntId) });
+  return { participants, stands, zones, reports, phases, assignments, extraZones };
 }
 
 export function useCreateHunt(groupId: string) {
@@ -83,6 +84,39 @@ export function useHuntActions(huntId: string) {
       }),
     ),
     removeZone: useMutation(m((zoneId: string) => hunts.removeZone(zoneId))),
+    setZoneColor: useMutation(m(({ id, color }: { id: string; color: string | null }) => hunts.setZoneColor(id, color))),
+    /**
+     * Zonen eines Teilnehmers setzen: die erste wird wie bisher die Zone (zone_id), alle weiteren
+     * kommen in hunt_participant_zones (Migration 0018). Ohne `plan` gilt das für die aktive Phase
+     * bzw. die Jagd ohne Phasen; mit `plan` für eine andere Phase.
+     */
+    setZones: useMutation(
+      m(
+        async ({
+          participantId,
+          phaseId,
+          zoneIds,
+          currentMain,
+          extras,
+          plan,
+        }: {
+          participantId: string;
+          phaseId: string | null;
+          zoneIds: string[];
+          currentMain: string | null;
+          extras: ExtraZone[];
+          plan?: { standId: string | null };
+        }) => {
+          const [main = null, ...rest] = zoneIds;
+          if (plan && phaseId) {
+            if (main !== currentMain) await hunts.setAssignment(huntId, { phaseId, participantId, standId: plan.standId, zoneId: main });
+          } else if (main !== currentMain) await hunts.updateParticipant(participantId, { zoneId: main });
+          const current = extraZonesOf(extras, participantId, phaseId);
+          for (const e of current.filter((x) => !rest.includes(x.zoneId))) await hunts.removeExtraZone(e.id);
+          for (const z of rest.filter((id) => !current.some((x) => x.zoneId === id))) await hunts.addExtraZone(huntId, { participantId, zoneId: z, phaseId });
+        },
+      ),
+    ),
     createStand: useMutation(m((input: StandInput) => hunts.createStand(huntId, input))),
     updateStand: useMutation(m(({ id, input }: { id: string; input: StandInput }) => hunts.updateStand(id, input))),
     removeStand: useMutation(m((standId: string) => hunts.removeStand(standId))),
@@ -95,7 +129,21 @@ export function useHuntActions(huntId: string) {
      * Zuteilung, wenn es noch keine Phasen gibt); die erste Phase wird gleich aktiv.
      */
     addPhase: useMutation(
-      m(async ({ phases, currentPhaseId, participants, assignments }: { phases: Phase[]; currentPhaseId: string | null; participants: Participant[]; assignments: PhaseAssignment[] }) => {
+      m(
+        async ({
+          phases,
+          currentPhaseId,
+          participants,
+          assignments,
+          extras,
+        }: {
+          phases: Phase[];
+          currentPhaseId: string | null;
+          participants: Participant[];
+          assignments: PhaseAssignment[];
+          /** Weitere Zonen; null = Migration 0018 fehlt. */
+          extras?: ExtraZone[] | null;
+        }) => {
         const sorted = sortPhases(phases);
         const phase = await hunts.createPhase(huntId, { name: `Phase ${sorted.length + 1}`, sortOrder: (sorted.at(-1)?.sortOrder ?? 0) + 1 });
         const source = participants.map((p) => {
@@ -103,9 +151,14 @@ export function useHuntActions(huntId: string) {
           return { participantId: p.id, standId: currentPhaseId ? (a?.standId ?? null) : p.standId, zoneId: currentPhaseId ? (a?.zoneId ?? null) : p.zoneId };
         });
         for (const s of source.filter((x) => x.standId || x.zoneId)) await hunts.setAssignment(huntId, { phaseId: phase.id, ...s });
+        // Weitere Zonen der aktiven Phase (bzw. der Jagd ohne Phasen) mitnehmen.
+        for (const e of (extras ?? []).filter((x) => x.phaseId === currentPhaseId && participants.some((p) => p.id === x.participantId))) {
+          await hunts.addExtraZone(huntId, { participantId: e.participantId, zoneId: e.zoneId, phaseId: phase.id });
+        }
         if (sorted.length === 0) await hunts.activatePhase(huntId, phase.id);
         return phase;
-      }),
+        },
+      ),
     ),
     removePhase: useMutation(m((phaseId: string) => hunts.removePhase(phaseId))),
     activatePhase: useMutation(m((phaseId: string) => hunts.activatePhase(huntId, phaseId))),

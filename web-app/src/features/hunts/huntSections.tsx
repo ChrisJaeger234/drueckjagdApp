@@ -16,8 +16,11 @@ import {
   newReport,
   REPORT_KINDS,
   SELF_ASSIGNABLE_ROLES,
+  ZONE_COLORS,
   ZONE_KINDS,
   zoneColor,
+  zoneIdsOf,
+  type ExtraZone,
   type Hunt,
   type HuntPermissions,
   type HuntRole,
@@ -30,6 +33,7 @@ import {
 } from './huntModel';
 import type { HuntActions } from './useHunts';
 import { CATEGORY_LABEL } from '../reviere/revierModel';
+import { ZonePicker } from './ZonePicker';
 
 const errorText = (e: unknown) => (e ? mapError(e).message : null);
 const select = 'min-h-10 rounded-xl border border-line bg-surface px-2 text-sm';
@@ -41,6 +45,7 @@ export function MyParticipation({
   me,
   myStand,
   zones,
+  myZoneIds = [],
   perms,
   actions,
 }: {
@@ -48,6 +53,8 @@ export function MyParticipation({
   me: Participant | null;
   myStand: Stand | null;
   zones: Zone[];
+  /** Eigene Zonen (erste Zone und weitere), in der Karte hervorgehoben. */
+  myZoneIds?: string[];
   perms: HuntPermissions;
   actions: HuntActions;
 }) {
@@ -80,7 +87,7 @@ export function MyParticipation({
       </Card>
     );
   }
-  const zone = zones.find((z) => z.id === me.zoneId);
+  const myZones = (myZoneIds.length ? myZoneIds : me.zoneId ? [me.zoneId] : []).map((id) => zones.find((z) => z.id === id)).filter((z): z is Zone => !!z);
   return (
     <Card className="grid gap-2 border-primary/40 bg-sand-light/30">
       <div className="flex flex-wrap items-center gap-2">
@@ -92,10 +99,19 @@ export function MyParticipation({
       ) : me.role === 'schuetze' ? (
         <p className="text-sm text-muted">Noch kein Stand zugeteilt.</p>
       ) : null}
-      {zone && (
-        <p className="text-sm">
-          Zone: <span className="font-medium">{zone.name}</span> ({ZONE_KINDS[zone.kind]})
-        </p>
+      {myZones.length > 0 && (
+        <div className="grid gap-1 text-sm">
+          <span>{myZones.length === 1 ? 'Deine Zone' : 'Deine Zonen'} (in der Karte hervorgehoben):</span>
+          <ul className="flex flex-wrap gap-2" aria-label="Meine Zonen">
+            {myZones.map((z) => (
+              <li key={z.id} className="inline-flex items-center gap-1.5 rounded-lg border border-line bg-surface px-2 py-1">
+                <span className="size-3 shrink-0 rounded-sm" style={{ background: zoneColor(z) }} />
+                <span className="font-medium">{z.name}</span>
+                <span className="text-muted">({ZONE_KINDS[z.kind]})</span>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       {!isLeadRole(me.role) && (
         <label className="flex flex-wrap items-center gap-2 text-sm">
@@ -346,7 +362,11 @@ export function StandsCard({ stands, participants, perms, actions }: { stands: S
 
 // ------------------------------------------------------------ Zonen
 
+/** Auswahl für eigene Zonenfarben; die Farbe der Zonenart bleibt der Standard. */
+export const ZONE_PALETTE = ['#2f7d32', '#7cb342', '#00897b', '#1f5c8a', '#4fc3f7', '#5e35b1', '#d81b60', '#b3261e', '#d9480f', '#f9a825', '#795548', '#212121'];
+
 export function ZonesCard({ zones, perms, actions }: { zones: Zone[]; perms: HuntPermissions; actions: HuntActions }) {
+  const [coloring, setColoring] = useState<string | null>(null);
   if (zones.length === 0 && !perms.canManage) return null;
   return (
     <Card>
@@ -356,18 +376,71 @@ export function ZonesCard({ zones, perms, actions }: { zones: Zone[]; perms: Hun
       ) : (
         <ul className="grid gap-2" aria-label="Zonen">
           {zones.map((z) => (
-            <li key={z.id} className="flex items-center gap-2">
-              <span className="size-3 shrink-0 rounded-sm" style={{ background: zoneColor(z) }} />
-              <span className="flex-1 font-medium">{z.name}</span>
-              <Badge>{ZONE_KINDS[z.kind]}</Badge>
-              {perms.canManage && (
-                <ConfirmButton label={<Trash2 aria-label={`${z.name} löschen`} className="size-4" />} confirmText={`Zone „${z.name}“ löschen?`} confirmLabel="Ja, löschen" onConfirm={() => actions.removeZone.mutate(z.id)} />
+            <li key={z.id} className="grid gap-2">
+              <div className="flex items-center gap-2">
+                {perms.canManage ? (
+                  <button
+                    type="button"
+                    aria-label={`Farbe von ${z.name} ändern`}
+                    aria-expanded={coloring === z.id}
+                    onClick={() => setColoring(coloring === z.id ? null : z.id)}
+                    className="inline-flex size-10 shrink-0 items-center justify-center rounded-xl border border-line bg-surface"
+                  >
+                    <span className="size-5 rounded-md border border-black/10" style={{ background: zoneColor(z) }} />
+                  </button>
+                ) : (
+                  <span className="size-3 shrink-0 rounded-sm" style={{ background: zoneColor(z) }} />
+                )}
+                <span className="flex-1 font-medium">{z.name}</span>
+                <Badge>{ZONE_KINDS[z.kind]}</Badge>
+                {perms.canManage && (
+                  <ConfirmButton label={<Trash2 aria-label={`${z.name} löschen`} className="size-4" />} confirmText={`Zone „${z.name}“ löschen?`} confirmLabel="Ja, löschen" onConfirm={() => actions.removeZone.mutate(z.id)} />
+                )}
+              </div>
+              {perms.canManage && coloring === z.id && (
+                <div className="flex flex-wrap items-center gap-2 rounded-xl border border-line p-2" role="group" aria-label={`Farbe für ${z.name}`}>
+                  <button
+                    type="button"
+                    aria-pressed={z.color === null}
+                    onClick={() => actions.setZoneColor.mutate({ id: z.id, color: null })}
+                    className={`inline-flex min-h-10 items-center gap-1.5 rounded-xl border px-2 text-sm ${z.color === null ? 'border-primary ring-2 ring-primary' : 'border-line'}`}
+                  >
+                    <span className="size-5 rounded-md" style={{ background: ZONE_COLORS[z.kind] }} />
+                    Wie Art
+                  </button>
+                  {ZONE_PALETTE.map((c) => {
+                    const active = z.color?.toLowerCase() === c;
+                    return (
+                      <button
+                        key={c}
+                        type="button"
+                        aria-label={`Farbe ${c}`}
+                        aria-pressed={active}
+                        onClick={() => actions.setZoneColor.mutate({ id: z.id, color: c })}
+                        className={`size-10 rounded-xl border ${active ? 'border-primary ring-2 ring-primary' : 'border-line'}`}
+                        style={{ background: c }}
+                      />
+                    );
+                  })}
+                  <label className="inline-flex min-h-10 items-center gap-1 text-sm">
+                    Eigene
+                    <input
+                      type="color"
+                      aria-label={`Eigene Farbe für ${z.name}`}
+                      defaultValue={zoneColor(z)}
+                      // Erst beim Schließen des Farbwählers speichern, nicht bei jeder Bewegung.
+                      onBlur={(e) => e.target.value.toLowerCase() !== zoneColor(z).toLowerCase() && actions.setZoneColor.mutate({ id: z.id, color: e.target.value.toLowerCase() })}
+                      className="h-10 w-12 cursor-pointer rounded-xl border border-line bg-surface"
+                    />
+                  </label>
+                </div>
               )}
             </li>
           ))}
         </ul>
       )}
-      <FormError message={errorText(actions.removeZone.error)} />
+      {perms.canManage && zones.length > 0 && <p className="mt-2 text-xs text-muted">Tippe auf das Farbfeld, um einer Zone eine eigene Farbe zu geben.</p>}
+      <FormError message={errorText(actions.removeZone.error) ?? errorText(actions.setZoneColor.error)} />
     </Card>
   );
 }
@@ -379,6 +452,7 @@ export function ParticipantsCard({
   participants,
   stands,
   zones,
+  extras,
   perms,
   actions,
   userId,
@@ -387,10 +461,13 @@ export function ParticipantsCard({
   participants: Participant[];
   stands: Stand[];
   zones: Zone[];
+  /** Weitere Zonen; null = Datenbank kennt nur eine Zone je Teilnehmer. */
+  extras: ExtraZone[] | null;
   perms: HuntPermissions;
   actions: HuntActions;
   userId: string;
 }) {
+  const phaseId = hunt.currentPhaseId ?? null;
   const counts = participants.reduce<Partial<Record<HuntRole, number>>>((acc, p) => ({ ...acc, [p.role]: (acc[p.role] ?? 0) + 1 }), {});
   return (
     <Card>
@@ -427,14 +504,14 @@ export function ParticipantsCard({
                     </select>
                   )}
                   {zones.length > 0 && p.role !== 'schuetze' && (
-                    <select aria-label={`Zone von ${p.name}`} value={p.zoneId ?? ''} onChange={(e) => actions.updateParticipant.mutate({ id: p.id, zoneId: e.target.value || null })} className={select}>
-                      <option value="">Keine Zone</option>
-                      {zones.map((z) => (
-                        <option key={z.id} value={z.id}>
-                          {z.name}
-                        </option>
-                      ))}
-                    </select>
+                    <ZonePicker
+                      label={`Zone von ${p.name}`}
+                      zones={zones}
+                      multi={extras !== null}
+                      disabled={actions.setZones.isPending}
+                      value={zoneIdsOf(p.zoneId, extras ?? [], p.id, phaseId, zones)}
+                      onChange={(zoneIds) => actions.setZones.mutate({ participantId: p.id, phaseId, zoneIds, currentMain: p.zoneId, extras: extras ?? [] })}
+                    />
                   )}
                   {p.userId !== userId && (
                     <ConfirmButton label="Entfernen" confirmText={`${p.name} aus der Jagd entfernen?`} confirmLabel="Ja, entfernen" onConfirm={() => actions.removeParticipant.mutate(p.id)} />
@@ -446,7 +523,7 @@ export function ParticipantsCard({
         })}
       </ul>
       {perms.canManage && <AddParticipant hunt={hunt} participants={participants} perms={perms} actions={actions} />}
-      <FormError message={errorText(actions.updateParticipant.error) ?? errorText(actions.removeParticipant.error)} />
+      <FormError message={errorText(actions.updateParticipant.error) ?? errorText(actions.removeParticipant.error) ?? errorText(actions.setZones.error)} />
     </Card>
   );
 }

@@ -517,3 +517,35 @@ export function positionAge(updatedAt: string, now = Date.now()): { text: string
 export function newReport(fields: Omit<ReportInput, 'id' | 'occurredAt'>): ReportInput {
   return { id: crypto.randomUUID(), occurredAt: new Date().toISOString(), ...fields };
 }
+
+// ------------------------------------------------------------ weitere Zonen (Migration 0018)
+
+/** Weitere Zone eines Teilnehmers zusätzlich zu zoneId; phaseId null = Jagd ohne Phasen. */
+export interface ExtraZone {
+  id: string;
+  participantId: string;
+  zoneId: string;
+  phaseId: string | null;
+}
+
+export const EXTRA_ZONE_COLUMNS = 'id, participant_id, zone_id, phase_id';
+
+export interface ExtraZoneRow {
+  id: string;
+  participant_id: string;
+  zone_id: string;
+  phase_id: string | null;
+}
+
+export const extraZoneFromRow = (r: ExtraZoneRow): ExtraZone => ({ id: r.id, participantId: r.participant_id, zoneId: r.zone_id, phaseId: r.phase_id });
+
+/** Weitere Zonen eines Teilnehmers in einer Phase (null = ohne Phasen). */
+export const extraZonesOf = (extras: ExtraZone[], participantId: string, phaseId: string | null) =>
+  extras.filter((e) => e.participantId === participantId && e.phaseId === phaseId);
+
+/** Alle Zonen eines Teilnehmers: erste Zone, dann die weiteren, ohne Doppelte und ohne gelöschte Zonen. */
+export function zoneIdsOf(mainZoneId: string | null, extras: ExtraZone[], participantId: string, phaseId: string | null, zones?: Pick<Zone, 'id'>[]): string[] {
+  const ids = [mainZoneId, ...extraZonesOf(extras, participantId, phaseId).map((e) => e.zoneId)].filter((id): id is string => !!id);
+  const unique = [...new Set(ids)];
+  return zones ? unique.filter((id) => zones.some((z) => z.id === id)) : unique;
+}
