@@ -1,5 +1,5 @@
 import { useState, type ButtonHTMLAttributes, type ReactNode } from 'react';
-import type { LucideIcon } from 'lucide-react';
+import { ChevronDown, type LucideIcon } from 'lucide-react';
 
 /** Kopfzeile und Inhalt einer Seite, mit Abstand zur sicheren Zone auf dem iPhone. */
 export function Page({ title, children, actions }: { title: string; children: ReactNode; actions?: ReactNode }) {
@@ -16,6 +16,62 @@ export function Page({ title, children, actions }: { title: string; children: Re
 
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return <section className={`rounded-2xl border border-line bg-surface p-4 ${className}`}>{children}</section>;
+}
+
+const readCollapsed = (key: string) => {
+  try {
+    return localStorage.getItem(`einklappen:${key}`) === '1';
+  } catch {
+    return false;
+  }
+};
+
+/**
+ * Karte mit Überschrift und kleinem Pfeil oben rechts zum Ein- und Ausklappen.
+ * Der Zustand bleibt auf dem Gerät gespeichert (je `storageKey`).
+ */
+export function CollapsibleCard({
+  title,
+  label,
+  storageKey,
+  children,
+  className = '',
+}: {
+  /** Inhalt der Überschrift (h2), darf Symbole oder Badges enthalten. */
+  title: ReactNode;
+  /** Name für Vorlesen, z. B. „Stände“. */
+  label: string;
+  storageKey: string;
+  children: ReactNode;
+  className?: string;
+}) {
+  const [collapsed, setCollapsed] = useState(() => readCollapsed(storageKey));
+  const toggle = () => {
+    const next = !collapsed;
+    setCollapsed(next);
+    try {
+      localStorage.setItem(`einklappen:${storageKey}`, next ? '1' : '0');
+    } catch {
+      // Ohne Speicher gilt der Zustand nur bis zum Neuladen.
+    }
+  };
+  return (
+    <section className={`grid gap-3 rounded-2xl border border-line bg-surface p-4 ${className}`}>
+      <div className="-my-1 flex items-center gap-2">
+        <h2 className="flex min-w-0 flex-1 flex-wrap items-center gap-2 font-semibold">{title}</h2>
+        <button
+          type="button"
+          aria-expanded={!collapsed}
+          aria-label={collapsed ? `${label} ausklappen` : `${label} einklappen`}
+          onClick={toggle}
+          className="-mr-2 inline-flex size-10 shrink-0 items-center justify-center rounded-xl text-muted hover:bg-sand-light/40"
+        >
+          <ChevronDown aria-hidden className={`size-5 transition-transform ${collapsed ? '-rotate-90' : ''}`} />
+        </button>
+      </div>
+      {!collapsed && <div className="grid gap-3">{children}</div>}
+    </section>
+  );
 }
 
 type ButtonVariant = 'primary' | 'secondary' | 'danger';

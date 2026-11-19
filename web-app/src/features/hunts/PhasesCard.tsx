@@ -1,7 +1,7 @@
 // Phasen einer Jagd (Migration 0016): Abschnitte mit eigener Zuteilung von Ständen und Zonen.
 import { ChevronRight, Layers, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
-import { Badge, Button, Card, ConfirmButton } from '../../components/ui';
+import { Badge, Button, Card, CollapsibleCard, ConfirmButton } from '../../components/ui';
 import { FormError } from '../../components/form';
 import { mapError } from '../../lib/errors';
 import { HUNT_ROLES, nextPhase, sortPhases, zoneIdsOf, type ExtraZone, type Hunt, type HuntPermissions, type Participant, type Phase, type PhaseAssignment, type Stand, type Zone } from './huntModel';
@@ -48,16 +48,21 @@ export function PhasesCard({
 
   return (
     <>
-      <Card className="grid gap-3">
-        <div className="flex flex-wrap items-center gap-2">
-          <Layers aria-hidden className="size-5 text-primary" />
-          <h2 className="font-semibold">Phasen</h2>
-          {current && (
-            <Badge tone="primary">
-              Aktiv: {current.name} ({position} von {sorted.length})
-            </Badge>
-          )}
-        </div>
+      <CollapsibleCard
+        label="Phasen"
+        storageKey="jagd-phasen"
+        title={
+          <>
+            <Layers aria-hidden className="size-5 text-primary" />
+            Phasen
+            {current && (
+              <Badge tone="primary">
+                Aktiv: {current.name} ({position} von {sorted.length})
+              </Badge>
+            )}
+          </>
+        }
+      >
 
         {sorted.length === 0 && (
           <>
@@ -114,7 +119,7 @@ export function PhasesCard({
           <p className="text-xs text-muted">Änderungen an Ständen und Zonen weiter unten gelten für die aktive Phase. Andere Phasen planst du über „Planen“.</p>
         )}
         <FormError message={error} />
-      </Card>
+      </CollapsibleCard>
 
       {perms.canManage && planned && (
         <PhasePlanCard key={planned.id} phase={planned} assignments={assignments} participants={participants} stands={stands} zones={zones} extras={extras} actions={actions} onClose={() => setPlanning(null)} />

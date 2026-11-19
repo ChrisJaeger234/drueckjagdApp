@@ -1,7 +1,7 @@
 import { CheckCircle2, Crosshair, Eye, MessageSquare, RotateCcw, Trash2, UserPlus, XCircle } from 'lucide-react';
 import { onlineManager } from '@tanstack/react-query';
 import { useState, type FormEvent } from 'react';
-import { Badge, Button, Card, ConfirmButton } from '../../components/ui';
+import { Badge, Button, Card, CollapsibleCard, ConfirmButton } from '../../components/ui';
 import { Field, FormError, FormSuccess } from '../../components/form';
 import { mapError } from '../../lib/errors';
 import type { OwnPosition } from '../../modules/map/MapView';
@@ -312,8 +312,7 @@ function ReportForm({
 export function StandsCard({ stands, participants, perms, actions }: { stands: Stand[]; participants: Participant[]; perms: HuntPermissions; actions: HuntActions }) {
   const assignable = participants.filter((p) => !isLeadRole(p.role) || p.standId);
   return (
-    <Card>
-      <h2 className="mb-3 font-semibold">Stände ({stands.length})</h2>
+    <CollapsibleCard title={`Stände (${stands.length})`} label="Stände" storageKey="jagd-staende">
       {stands.length === 0 ? (
         <p className="text-sm text-muted">{perms.canManage ? 'Setze Stände über „Stand setzen“ auf der Karte.' : 'Noch keine Stände eingetragen.'}</p>
       ) : (
@@ -356,7 +355,7 @@ export function StandsCard({ stands, participants, perms, actions }: { stands: S
         </ul>
       )}
       <FormError message={errorText(actions.updateParticipant.error) ?? errorText(actions.removeStand.error)} />
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -366,8 +365,7 @@ export function ZonesCard({ zones, perms, actions }: { zones: Zone[]; perms: Hun
   const [coloring, setColoring] = useState<string | null>(null);
   if (zones.length === 0 && !perms.canManage) return null;
   return (
-    <Card>
-      <h2 className="mb-3 font-semibold">Zonen ({zones.length})</h2>
+    <CollapsibleCard title={`Zonen (${zones.length})`} label="Zonen" storageKey="jagd-zonen">
       {zones.length === 0 ? (
         <p className="text-sm text-muted">Treiben, Sicherheits- und Sperrzonen zeichnest du über „Zone zeichnen“.</p>
       ) : (
@@ -406,7 +404,7 @@ export function ZonesCard({ zones, perms, actions }: { zones: Zone[]; perms: Hun
       )}
       {perms.canManage && zones.length > 0 && <p className="mt-2 text-xs text-muted">Tippe bei einer Zone auf „Farbe“, um ihr eine eigene Farbe zu geben.</p>}
       <FormError message={errorText(actions.removeZone.error) ?? errorText(actions.setZoneColor.error)} />
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -435,9 +433,8 @@ export function ParticipantsCard({
   const phaseId = hunt.currentPhaseId ?? null;
   const counts = participants.reduce<Partial<Record<HuntRole, number>>>((acc, p) => ({ ...acc, [p.role]: (acc[p.role] ?? 0) + 1 }), {});
   return (
-    <Card>
-      <h2 className="font-semibold">Teilnehmer ({participants.length})</h2>
-      <p className="mb-3 text-sm text-muted">
+    <CollapsibleCard title={`Teilnehmer (${participants.length})`} label="Teilnehmer" storageKey="jagd-teilnehmer">
+      <p className="text-sm text-muted">
         {(Object.keys(HUNT_ROLES) as HuntRole[])
           .filter((r) => counts[r])
           .map((r) => `${counts[r]} ${HUNT_ROLES[r]}`)
@@ -489,7 +486,7 @@ export function ParticipantsCard({
       </ul>
       {perms.canManage && <AddParticipant hunt={hunt} participants={participants} perms={perms} actions={actions} />}
       <FormError message={errorText(actions.updateParticipant.error) ?? errorText(actions.removeParticipant.error) ?? errorText(actions.setZones.error)} />
-    </Card>
+    </CollapsibleCard>
   );
 }
 
@@ -531,8 +528,7 @@ function AddParticipant({ hunt, participants, perms, actions }: { hunt: Hunt; pa
 
 export function ReportsCard({ reports, stands, perms, actions }: { reports: Report[]; stands: Stand[]; perms: HuntPermissions; actions: HuntActions }) {
   return (
-    <Card>
-      <h2 className="mb-3 font-semibold">Meldungen ({reports.length})</h2>
+    <CollapsibleCard title={`Meldungen (${reports.length})`} label="Meldungen" storageKey="jagd-meldungen">
       {reports.length === 0 ? (
         <p className="text-sm text-muted">Noch keine Meldungen.</p>
       ) : (
@@ -579,6 +575,6 @@ export function ReportsCard({ reports, stands, perms, actions }: { reports: Repo
         </ul>
       )}
       <FormError message={errorText(actions.setReportResolved.error) ?? errorText(actions.removeReport.error)} />
-    </Card>
+    </CollapsibleCard>
   );
 }
