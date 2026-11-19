@@ -41,7 +41,7 @@ export function ZoneLegend({
           ) : null}
         </p>
       )}
-      <ul className="grid gap-2" aria-label="Legende Zonen">
+      <ul className="grid gap-2" aria-label="Legende">
         {ordered.map((z) => {
           const own = myZoneIds.includes(z.id);
           const names = people.filter((p) => zoneIdsByPerson.get(p.id)?.includes(z.id)).map((p) => p.name);

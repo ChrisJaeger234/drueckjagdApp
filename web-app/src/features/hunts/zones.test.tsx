@@ -75,7 +75,7 @@ describe('Zonen für Treiber', () => {
     expect(within(mine).queryByText('Treiben Bach')).not.toBeInTheDocument();
     // Legende unter der Karte: eigene Rolle und Zonen, eigene Zonen zuerst.
     expect(screen.getByTestId('legend-me')).toHaveTextContent('Du bist Treiber · Zonen: Treiben Eichenhang, Treiben Fichten');
-    const legend = within(screen.getByRole('list', { name: 'Legende Zonen' })).getAllByRole('listitem');
+    const legend = within(screen.getByRole('list', { name: 'Legende' })).getAllByRole('listitem');
     expect(legend.map((li) => li.textContent)).toEqual([
       expect.stringContaining('Treiben Eichenhang'),
       expect.stringContaining('Treiben Fichten'),
