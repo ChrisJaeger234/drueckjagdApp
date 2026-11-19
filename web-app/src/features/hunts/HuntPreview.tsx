@@ -20,7 +20,9 @@ import {
   ZONE_KINDS,
   zoneColor,
   zoneIdsOf,
+  hidesStandNames,
   type ExtraZone,
+  type Phase,
   type Hunt,
   type HuntRole,
   type Participant,
@@ -29,6 +31,7 @@ import {
   type Zone,
 } from "./huntModel";
 import type { useHuntActions } from "./useHunts";
+import { ZoneLegend } from "./ZoneLegend";
 
 type HuntActions = ReturnType<typeof useHuntActions>;
 
@@ -45,6 +48,7 @@ export function HuntPreview({
   stands,
   zones,
   extras = [],
+  phase = null,
   reports,
   boundaries,
   actions,
@@ -55,6 +59,7 @@ export function HuntPreview({
   stands: Stand[];
   zones: Zone[];
   extras?: ExtraZone[];
+  phase?: Phase | null;
   reports: Report[];
   boundaries: RevierBoundary[];
   actions: HuntActions;
@@ -110,6 +115,7 @@ export function HuntPreview({
       color: s.category ? categoryColor(s.category) : "#7a4a1f",
       ariaLabel: `Stand ${s.label}`,
       highlight: s.id === viewer.standId,
+      hideLabel: hidesStandNames(viewer.role) && s.id !== viewer.standId,
     };
   });
   const areas = zones.map((z) => ({
@@ -206,6 +212,14 @@ export function HuntPreview({
         markers={markers}
         fit={fit}
         fitKey={`vorschau:${hunt.id}`}
+      />
+      <ZoneLegend
+        zones={zones}
+        people={people}
+        extras={extras}
+        phase={phase}
+        viewer={viewer}
+        myZoneIds={myZones.map((z) => z.id)}
       />
 
       <StandsCard

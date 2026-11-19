@@ -108,10 +108,10 @@ check(await visible(lead.getByRole('list', { name: 'Stände aus der Datei' }).ge
 if (shot) await lead.screenshot({ path: `${shot}/jagd-import.png`, fullPage: true });
 await lead.getByRole('button', { name: '1 Zone und 1 Stand übernehmen' }).click();
 check(await visible(lead.getByText('1 Zone und 1 Stand übernommen.')), 'Karte importiert (Zone und Stand in der Datenbank)');
-check(await visible(lead.getByRole('list', { name: 'Zonen' }).getByText('TW2 - Runde 1')), 'Importierte Zone erscheint');
+check(await visible(lead.getByRole('list', { name: 'Zonen', exact: true }).getByText('TW2 - Runde 1')), 'Importierte Zone erscheint');
 check(await visible(lead.getByRole('list', { name: 'Stände' }).getByText('DJB #10')), 'Importierter Stand erscheint');
 check(
-  (await lead.getByRole('list', { name: 'Zonen' }).locator('li', { hasText: 'TW2 - Runde 1' }).locator('span').first().evaluate((el) => getComputedStyle(el).backgroundColor)) === 'rgb(255, 82, 82)',
+  (await lead.getByRole('list', { name: 'Zonen', exact: true }).locator('li', { hasText: 'TW2 - Runde 1' }).locator('span').first().evaluate((el) => getComputedStyle(el).backgroundColor)) === 'rgb(255, 82, 82)',
   'Farbe aus der KML übernommen',
 );
 await lead.getByRole('button', { name: 'Jagd starten' }).click();

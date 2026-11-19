@@ -98,7 +98,8 @@ textarea {
   font-size: 12px;
   font-weight: 600;
 }
-.map-drawing .map-waypoint-label {
+.map-drawing .map-waypoint-label,
+.map-waypoint-nolabel .map-waypoint-label {
   display: none;
 }
 .map-drawing .map-waypoint {

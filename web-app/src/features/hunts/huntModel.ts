@@ -19,6 +19,8 @@ export const HUNT_ROLES = {
 } as const;
 export type HuntRole = keyof typeof HUNT_ROLES;
 export const isLeadRole = (r: HuntRole) => r === 'jagdleiter' || r === 'ansteller';
+/** Treiber sehen in der Karte die Stände ohne Namen, damit die Zonen lesbar bleiben. */
+export const hidesStandNames = (r: HuntRole | null) => r === 'treiber';
 /** Rollen, die man sich selbst geben darf (Trigger guard_hunt_participant). */
 export const SELF_ASSIGNABLE_ROLES = (Object.keys(HUNT_ROLES) as HuntRole[]).filter((r) => !isLeadRole(r));
 
