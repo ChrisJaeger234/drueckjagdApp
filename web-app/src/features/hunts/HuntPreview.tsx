@@ -212,6 +212,7 @@ export function HuntPreview({
         markers={markers}
         fit={fit}
         fitKey={`vorschau:${hunt.id}`}
+        position={position.status === "ok" ? position.position : null}
       />
       <ZoneLegend
         zones={zones}
