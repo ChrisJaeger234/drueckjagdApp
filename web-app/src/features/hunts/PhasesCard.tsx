@@ -4,8 +4,9 @@ import { useState } from 'react';
 import { Badge, Button, Card, ConfirmButton } from '../../components/ui';
 import { FormError } from '../../components/form';
 import { mapError } from '../../lib/errors';
-import { HUNT_ROLES, nextPhase, sortPhases, type Hunt, type HuntPermissions, type Participant, type Phase, type PhaseAssignment, type Stand, type Zone } from './huntModel';
+import { HUNT_ROLES, nextPhase, sortPhases, zoneIdsOf, type ExtraZone, type Hunt, type HuntPermissions, type Participant, type Phase, type PhaseAssignment, type Stand, type Zone } from './huntModel';
 import type { HuntActions } from './useHunts';
+import { ZonePicker } from './ZonePicker';
 
 const errorText = (e: unknown) => (e ? mapError(e).message : null);
 const select = 'min-h-10 rounded-xl border border-line bg-surface px-2 text-sm';
@@ -17,6 +18,7 @@ export function PhasesCard({
   participants,
   stands,
   zones,
+  extras = null,
   perms,
   actions,
 }: {
@@ -26,6 +28,8 @@ export function PhasesCard({
   participants: Participant[];
   stands: Stand[];
   zones: Zone[];
+  /** Weitere Zonen (Migration 0018); null = nur eine Zone je Teilnehmer. */
+  extras?: ExtraZone[] | null;
   perms: HuntPermissions;
   actions: HuntActions;
 }) {
@@ -39,8 +43,8 @@ export function PhasesCard({
   if (sorted.length === 0 && !perms.canManage) return null;
 
   const add = () =>
-    actions.addPhase.mutate({ phases: sorted, currentPhaseId: hunt.currentPhaseId, participants, assignments }, { onSuccess: (p) => sorted.length > 0 && setPlanning((p as Phase).id) });
-  const error = errorText(actions.addPhase.error) ?? errorText(actions.activatePhase.error) ?? errorText(actions.removePhase.error) ?? errorText(actions.setAssignment.error);
+    actions.addPhase.mutate({ phases: sorted, currentPhaseId: hunt.currentPhaseId, participants, assignments, extras }, { onSuccess: (p) => sorted.length > 0 && setPlanning((p as Phase).id) });
+  const error = errorText(actions.addPhase.error) ?? errorText(actions.activatePhase.error) ?? errorText(actions.removePhase.error) ?? errorText(actions.setAssignment.error) ?? errorText(actions.setZones.error);
 
   return (
     <>
@@ -113,7 +117,7 @@ export function PhasesCard({
       </Card>
 
       {perms.canManage && planned && (
-        <PhasePlanCard key={planned.id} phase={planned} assignments={assignments} participants={participants} stands={stands} zones={zones} actions={actions} onClose={() => setPlanning(null)} />
+        <PhasePlanCard key={planned.id} phase={planned} assignments={assignments} participants={participants} stands={stands} zones={zones} extras={extras} actions={actions} onClose={() => setPlanning(null)} />
       )}
     </>
   );
@@ -126,6 +130,7 @@ function PhasePlanCard({
   participants,
   stands,
   zones,
+  extras,
   actions,
   onClose,
 }: {
@@ -134,6 +139,7 @@ function PhasePlanCard({
   participants: Participant[];
   stands: Stand[];
   zones: Zone[];
+  extras: ExtraZone[] | null;
   actions: HuntActions;
   onClose: () => void;
 }) {
@@ -168,14 +174,18 @@ function PhasePlanCard({
                     </option>
                   ))}
                 </select>
-                <select aria-label={`Zone von ${p.name} in ${phase.name}`} value={a?.zoneId ?? ''} onChange={(e) => set(p.id, { zoneId: e.target.value || null })} className={select}>
-                  <option value="">Keine Zone</option>
-                  {zones.map((z) => (
-                    <option key={z.id} value={z.id}>
-                      {z.name}
-                    </option>
-                  ))}
-                </select>
+                {zones.length > 0 && (
+                  <ZonePicker
+                    label={`Zone von ${p.name} in ${phase.name}`}
+                    zones={zones}
+                    multi={extras !== null}
+                    disabled={actions.setZones.isPending}
+                    value={zoneIdsOf(a?.zoneId ?? null, extras ?? [], p.id, phase.id, zones)}
+                    onChange={(zoneIds) =>
+                      actions.setZones.mutate({ participantId: p.id, phaseId: phase.id, zoneIds, currentMain: a?.zoneId ?? null, extras: extras ?? [], plan: { standId: a?.standId ?? null } })
+                    }
+                  />
+                )}
               </div>
             </li>
           );

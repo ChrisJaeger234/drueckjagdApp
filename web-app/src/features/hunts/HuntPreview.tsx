@@ -19,6 +19,8 @@ import {
   huntPermissions,
   ZONE_KINDS,
   zoneColor,
+  zoneIdsOf,
+  type ExtraZone,
   type Hunt,
   type HuntRole,
   type Participant,
@@ -42,6 +44,7 @@ export function HuntPreview({
   people,
   stands,
   zones,
+  extras = [],
   reports,
   boundaries,
   actions,
@@ -51,6 +54,7 @@ export function HuntPreview({
   people: Participant[];
   stands: Stand[];
   zones: Zone[];
+  extras?: ExtraZone[];
   reports: Report[];
   boundaries: RevierBoundary[];
   actions: HuntActions;
@@ -88,7 +92,7 @@ export function HuntPreview({
   );
   const viewer = (choices.find((c) => c.key === key) ?? choices[0])!.person;
   const myStand = stands.find((s) => s.id === viewer.standId) ?? null;
-  const myZone = zones.find((z) => z.id === viewer.zoneId) ?? null;
+  const myZones = zoneIdsOf(viewer.zoneId, extras, viewer.id, hunt.currentPhaseId ?? null, zones).map((id) => zones.find((z) => z.id === id)!);
   // Teilnehmer ohne Gruppenrolle-Rechte: alles nur lesen.
   const perms = huntPermissions(viewer.userId, null, viewer);
 
@@ -112,6 +116,7 @@ export function HuntPreview({
     id: z.id,
     geometry: z.geometry,
     color: zoneColor(z),
+    highlight: myZones.some((m) => m.id === z.id),
   }));
   const fit = bboxOf([
     ...boundaries.map((b) => b.geometry),
@@ -162,10 +167,17 @@ export function HuntPreview({
         ) : viewer.role === "schuetze" ? (
           <p className="text-sm text-muted">Noch kein Stand zugeteilt.</p>
         ) : null}
-        {myZone && (
+        {myZones.length > 0 && (
           <p className="text-sm">
-            Zone: <span className="font-medium">{myZone.name}</span> (
-            {ZONE_KINDS[myZone.kind]})
+            {myZones.length === 1 ? "Deine Zone" : "Deine Zonen"} (in der Karte
+            hervorgehoben):{" "}
+            {myZones.map((z, i) => (
+              <span key={z.id}>
+                {i > 0 && ", "}
+                <span className="font-medium">{z.name}</span> (
+                {ZONE_KINDS[z.kind]})
+              </span>
+            ))}
           </p>
         )}
       </Card>
