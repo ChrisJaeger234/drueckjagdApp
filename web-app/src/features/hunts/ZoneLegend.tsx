@@ -1,5 +1,5 @@
 // Legende unter der Karte: Zonen der aktiven Phase, wer dort eingeteilt ist, und die eigene Rolle.
-import { Badge, Card } from '../../components/ui';
+import { Badge, CollapsibleCard } from '../../components/ui';
 import { HUNT_ROLES, ZONE_KINDS, zoneColor, zoneIdsOf, type ExtraZone, type Participant, type Phase, type Zone } from './huntModel';
 
 export function ZoneLegend({
@@ -26,8 +26,7 @@ export function ZoneLegend({
   const ordered = [...zones].sort((a, b) => Number(myZoneIds.includes(b.id)) - Number(myZoneIds.includes(a.id)));
   const mine = myZoneIds.map((id) => zones.find((z) => z.id === id)).filter((z): z is Zone => !!z);
   return (
-    <Card className="grid gap-3">
-      <h2 className="font-semibold">Zonen{phase ? ` in ${phase.name}` : ''}</h2>
+    <CollapsibleCard title={`Zonen${phase ? ` in ${phase.name}` : ''}`} label="Legende" storageKey="jagd-legende">
       {viewer && (
         <p className="rounded-xl bg-sand-light/40 px-3 py-2 text-sm" data-testid="legend-me">
           Du bist <span className="font-semibold">{HUNT_ROLES[viewer.role]}</span>
@@ -60,6 +59,6 @@ export function ZoneLegend({
           );
         })}
       </ul>
-    </Card>
+    </CollapsibleCard>
   );
 }

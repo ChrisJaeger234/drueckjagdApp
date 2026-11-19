@@ -137,3 +137,21 @@ describe('Zonen für Treiber', () => {
     await waitFor(() => expect(s.hunts.zoneList.find((z) => z.id === 'z-b')!.color).toBe('#abcdef'));
   });
 });
+
+describe('Einklappbare Kästen', () => {
+  it('klappt die Zonenliste ein und merkt sich das', async () => {
+    localStorage.removeItem('einklappen:jagd-zonen');
+    const s = setup();
+    const { unmount } = renderApp(`/jagd/${s.huntId}`, s);
+    expect(await screen.findByRole('list', { name: 'Zonen' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Zonen einklappen' }));
+    expect(screen.queryByRole('list', { name: 'Zonen' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Zonen ausklappen' })).toHaveAttribute('aria-expanded', 'false');
+    unmount();
+    renderApp(`/jagd/${s.huntId}`, s);
+    expect(await screen.findByRole('button', { name: 'Zonen ausklappen' })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Zonen ausklappen' }));
+    expect(screen.getByRole('list', { name: 'Zonen' })).toBeInTheDocument();
+    localStorage.removeItem('einklappen:jagd-zonen');
+  });
+});
