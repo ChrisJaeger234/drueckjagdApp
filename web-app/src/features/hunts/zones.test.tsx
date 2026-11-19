@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { FakeGroups, FakeHunts, FakeProfiles } from '../../test/fakes';
 import { renderApp, signedIn } from '../../test/renderApp';
-import { zoneIdsOf, type Zone } from './huntModel';
+import { hidesStandNames, zoneIdsOf, type Zone } from './huntModel';
 
 const square = { type: 'Polygon' as const, coordinates: [[[7.24, 51.16], [7.25, 51.16], [7.25, 51.17], [7.24, 51.16]]] };
 
@@ -42,6 +42,8 @@ describe('Zonen für Treiber', () => {
     expect(zoneIdsOf('z-a', extras, 'p1', null)).toEqual(['z-a', 'z-b', 'z-gone']);
     expect(zoneIdsOf('z-a', extras, 'p1', null, [{ id: 'z-a' }, { id: 'z-b' }])).toEqual(['z-a', 'z-b']);
     expect(zoneIdsOf(null, extras, 'p1', 'ph1')).toEqual(['z-c']);
+    expect(hidesStandNames('treiber')).toBe(true);
+    expect(hidesStandNames('schuetze')).toBe(false);
   });
 
   it('Jagdleiter teilt einem Treiber zwei Zonen zu', async () => {
@@ -71,6 +73,16 @@ describe('Zonen für Treiber', () => {
     expect(within(mine).getByText('Treiben Eichenhang')).toBeInTheDocument();
     expect(within(mine).getByText('Treiben Fichten')).toBeInTheDocument();
     expect(within(mine).queryByText('Treiben Bach')).not.toBeInTheDocument();
+    // Legende unter der Karte: eigene Rolle und Zonen, eigene Zonen zuerst.
+    expect(screen.getByTestId('legend-me')).toHaveTextContent('Du bist Treiber · Zonen: Treiben Eichenhang, Treiben Fichten');
+    const legend = within(screen.getByRole('list', { name: 'Legende Zonen' })).getAllByRole('listitem');
+    expect(legend.map((li) => li.textContent)).toEqual([
+      expect.stringContaining('Treiben Eichenhang'),
+      expect.stringContaining('Treiben Fichten'),
+      expect.stringContaining('Treiben Bach'),
+    ]);
+    expect(legend[0]).toHaveTextContent('deine Zone');
+    expect(legend[2]).not.toHaveTextContent('deine Zone');
     // Ohne Leitungsrechte keine Farbwahl.
     expect(screen.queryByRole('button', { name: 'Farbe von Treiben Bach ändern' })).not.toBeInTheDocument();
   });

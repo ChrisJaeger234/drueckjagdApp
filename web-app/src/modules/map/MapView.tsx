@@ -27,6 +27,8 @@ export interface MapMarker {
   ariaLabel: string;
   /** Hervorgehoben, z. B. der eigene Stand. */
   highlight?: boolean;
+  /** Nur Punkt ohne Namen, z. B. Einrichtungen in der Ansicht eines Treibers. */
+  hideLabel?: boolean;
 }
 
 export interface MapArea {
@@ -90,15 +92,34 @@ function draftCollection(points: Position[]): FeatureCollection {
 }
 
 function areaCollection(list: MapArea[]): FeatureCollection {
-  return { type: 'FeatureCollection', features: list.map((a) => ({ type: 'Feature', id: a.id, properties: { color: a.color, hl: a.highlight ? 1 : 0 }, geometry: a.geometry })) };
+  // Gibt es hervorgehobene Zonen, treten alle anderen zurück.
+  const any = list.some((a) => a.highlight);
+  return {
+    type: 'FeatureCollection',
+    features: list.map((a) => ({ type: 'Feature', id: a.id, properties: { color: a.color, hl: a.highlight ? 1 : 0, dim: any && !a.highlight ? 1 : 0 }, geometry: a.geometry })),
+  };
 }
 
 function addOverlays(map: MlMap) {
   map.addSource('areas', { type: 'geojson', data: EMPTY });
-  map.addLayer({ id: 'areas-fill', type: 'fill', source: 'areas', paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', ['==', ['get', 'hl'], 1], 0.4, 0.18] } });
+  map.addLayer({
+    id: 'areas-fill',
+    type: 'fill',
+    source: 'areas',
+    paint: { 'fill-color': ['get', 'color'], 'fill-opacity': ['case', ['==', ['get', 'hl'], 1], 0.5, ['==', ['get', 'dim'], 1], 0.06, 0.18] },
+  });
   // Hervorgehobene Zonen: weißer Rand unter einer breiten farbigen Linie, damit sie auf jeder Karte auffallen.
-  map.addLayer({ id: 'areas-halo', type: 'line', source: 'areas', filter: ['==', ['get', 'hl'], 1], paint: { 'line-color': '#ffffff', 'line-width': 9 } });
-  map.addLayer({ id: 'areas-line', type: 'line', source: 'areas', paint: { 'line-color': ['get', 'color'], 'line-width': ['case', ['==', ['get', 'hl'], 1], 5, 2.5] } });
+  map.addLayer({ id: 'areas-halo', type: 'line', source: 'areas', filter: ['==', ['get', 'hl'], 1], paint: { 'line-color': '#ffffff', 'line-width': 11 } });
+  map.addLayer({
+    id: 'areas-line',
+    type: 'line',
+    source: 'areas',
+    paint: {
+      'line-color': ['get', 'color'],
+      'line-width': ['case', ['==', ['get', 'hl'], 1], 6, ['==', ['get', 'dim'], 1], 1.5, 2.5],
+      'line-opacity': ['case', ['==', ['get', 'dim'], 1], 0.5, 1],
+    },
+  });
   map.addSource('boundaries', { type: 'geojson', data: EMPTY });
   map.addLayer({ id: 'boundaries-fill', type: 'fill', source: 'boundaries', paint: { 'fill-color': '#e0a526', 'fill-opacity': 0.12 } });
   map.addLayer({ id: 'boundaries-line', type: 'line', source: 'boundaries', paint: { 'line-color': '#e0a526', 'line-width': 3 } });
@@ -190,7 +211,7 @@ export default function MapView({ layer, boundaries = [], areas = [], markers = 
     const added: Marker[] = markers.map((m) => {
       const el = document.createElement('button');
       el.type = 'button';
-      el.className = `map-waypoint${m.highlight ? ' map-waypoint-highlight' : ''}`;
+      el.className = `map-waypoint${m.highlight ? ' map-waypoint-highlight' : ''}${m.hideLabel ? ' map-waypoint-nolabel' : ''}`;
       el.style.setProperty('--wp-color', m.color);
       el.setAttribute('aria-label', m.ariaLabel);
       el.innerHTML = '<span class="map-waypoint-dot"></span><span class="map-waypoint-label"></span>';

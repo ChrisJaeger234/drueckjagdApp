@@ -20,11 +20,12 @@ import { HuntSummaryCard } from './HuntSummary';
 import { HuntPreview } from './HuntPreview';
 import { PhasesCard } from './PhasesCard';
 import { ZoneColorChoice } from './ZoneColorChoice';
+import { ZoneLegend } from './ZoneLegend';
 import { RevierWaypointsCard, StandCategorySelect, StandFromWaypointCard } from './StandFromWaypoint';
 import { formatHuntTime } from './format';
 import { ParticipantsCard, ReportsCard, StandsCard, ZonesCard, MyParticipation, ReportButtons } from './huntSections';
 import { StatusBadge } from './HuntList';
-import { huntPermissions, isOpenFollowUp, livePermissions, ZONE_KINDS, zoneColor, zoneIdsOf, type Hunt, type ZoneKind } from './huntModel';
+import { huntPermissions, isOpenFollowUp, livePermissions, ZONE_KINDS, zoneColor, zoneIdsOf, hidesStandNames, type Hunt, type ZoneKind } from './huntModel';
 import { useHunt, useHuntActions, useHuntDetails, useHuntPositions } from './useHunts';
 import { LiveCard, liveMarkers } from '../live/LiveCard';
 import { huntImportFrom } from './huntImport';
@@ -121,6 +122,8 @@ function HuntView({ hunt }: { hunt: Hunt }) {
     );
   }
 
+  const hideStandNames = !perms.canManage && hidesStandNames(me?.role ?? null);
+  const currentPhase = (phases.data ?? []).find((p) => p.id === hunt.currentPhaseId) ?? null;
   // Einrichtungen des Reviers, die in dieser Jagd noch kein Stand sind.
   const freeWaypoints = useMemo(() => revierWaypoints.filter((w) => !standList.some((s) => s.waypointId === w.id)), [revierWaypoints, standList]);
   const markers: MapMarker[] = useMemo(
@@ -135,6 +138,8 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           color: s.category ? categoryColor(s.category) : '#7a4a1f',
           ariaLabel: `Stand ${s.label}`,
           highlight: me?.standId === s.id,
+          // Treiber brauchen nur die Punkte, die Namen verdecken sonst die Zonen.
+          hideLabel: hideStandNames && me?.standId !== s.id,
         };
       }),
       // Nicht übernommene Einrichtungen sieht nur die Planung.
@@ -144,7 +149,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
         .filter((s) => s.use && !s.duplicate)
         .map((s) => ({ id: `import-${s.key}`, lat: s.lat, lng: s.lng, label: s.label, color: STAND_PREVIEW_COLOR, ariaLabel: `Neuer Stand ${s.label}` })),
     ],
-    [standList, people, me?.standId, live.canView, positions, user.id, importing, freeWaypoints, perms.canManage, showWaypoints],
+    [hideStandNames, standList, people, me?.standId, live.canView, positions, user.id, importing, freeWaypoints, perms.canManage, showWaypoints],
   );
   const areas = useMemo(
     () => [
@@ -258,6 +263,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           stands={standList}
           zones={zoneList}
           extras={extras ?? []}
+          phase={currentPhase}
           reports={reportList}
           boundaries={boundaries}
           actions={actions}
@@ -286,6 +292,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           onMapClick={onMapClick}
           onMarkerClick={onMarkerClick}
         />
+        {mode.kind === 'view' && <ZoneLegend zones={zoneList} people={people} extras={extras ?? []} phase={currentPhase} viewer={me} myZoneIds={myZoneIds} />}
 
         {mode.kind === 'stand' && (
           <Card className="grid gap-3">
