@@ -1,6 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { RouterProvider } from '@tanstack/react-router';
 import { useState } from 'react';
+import { MAX_AGE } from '../lib/offline';
 import { AuthProvider } from '../features/auth/AuthContext';
 import type { createAppRouter } from './router';
 import { MovedBanner } from './MovedBanner';
@@ -11,7 +12,9 @@ export function createQueryClient() {
   return new QueryClient({
     defaultOptions: {
       // "offlineFirst": vorhandene Daten zeigen und Anfragen bei fehlendem Netz pausieren.
-      queries: { networkMode: 'offlineFirst', staleTime: 30_000, retry: 2 },
+      // gcTime so lang wie die Speicherdauer auf dem Gerät: sonst verwirft TanStack Query Daten, die
+      // 5 Minuten nicht angezeigt wurden (z. B. das Revier), auch aus dem Offline-Speicher.
+      queries: { networkMode: 'offlineFirst', staleTime: 30_000, retry: 2, gcTime: MAX_AGE },
       mutations: { networkMode: 'offlineFirst' },
     },
   });

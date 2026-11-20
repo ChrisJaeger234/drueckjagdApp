@@ -85,9 +85,18 @@ const cached = await page.evaluate(async () => {
 check(cached === packTiles, `Kacheln im Cache Storage: ${cached}`);
 
 // Neustart ohne Netz: Seite kommt aus dem Service Worker, Kacheln aus dem Paket.
+// Wie in offline-local.mjs: erst warten, bis der Service Worker bereit ist und die Revierdaten
+// gespeichert sind (Speichern ist auf 1 s gedrosselt). Sonst lädt der Test schneller neu, als ein
+// Mensch das Netz verliert, und die Seite bleibt bei „Revier wird geladen …“.
+await page.evaluate(() => navigator.serviceWorker.ready);
+await page.waitForTimeout(1500);
 await context.setOffline(true);
 await page.reload();
-await page.getByRole('heading', { level: 1, name: 'Hohe Buche' }).waitFor({ timeout: 15000 });
+await page.getByRole('heading', { level: 1, name: 'Hohe Buche' }).waitFor({ timeout: 15000 }).catch(async (e) => {
+  // Bei Fehlschlag zeigen, was stattdessen auf der Seite steht (z. B. „Revier wird geladen …“).
+  console.log(`Seite ohne Netz: ${(await page.locator('body').innerText().catch(() => '')).slice(0, 400).replace(/\n+/g, ' | ')}`);
+  throw e;
+});
 const map = page.locator('[data-pack-tiles]');
 const fromPack = await map
   .waitFor({ timeout: 20000 })
