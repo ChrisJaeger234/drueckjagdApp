@@ -18,7 +18,8 @@ import { mapError } from './errors';
 export const CACHE_KEY = 'drueckjagd-query-cache';
 /** Erhöhen, wenn sich die Form der gespeicherten Daten ändert. */
 const CACHE_VERSION = 'v1';
-const MAX_AGE = 1000 * 60 * 60 * 24 * 14;
+/** So lange bleiben Daten auf dem Gerät (14 Tage). */
+export const MAX_AGE = 1000 * 60 * 60 * 24 * 14;
 
 export const REPORT_MUTATION_KEY = ['hunt-report', 'create'] as const;
 export interface ReportVariables {
