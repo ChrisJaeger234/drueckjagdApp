@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import { FakeGroups, FakeHunts, FakeProfiles } from '../../test/fakes';
 import { renderApp, signedIn } from '../../test/renderApp';
-import { hidesStandNames, zoneIdsOf, type Zone } from './huntModel';
+import { assignedZones, hidesStandNames, zoneIdsOf, type Zone } from './huntModel';
 
 const square = { type: 'Polygon' as const, coordinates: [[[7.24, 51.16], [7.25, 51.16], [7.25, 51.17], [7.24, 51.16]]] };
 
@@ -85,6 +85,41 @@ describe('Zonen für Treiber', () => {
     expect(legend[2]).not.toHaveTextContent('deine Zone');
     // Ohne Leitungsrechte keine Farbwahl.
     expect(screen.queryByRole('button', { name: 'Farbe von Treiben Bach ändern' })).not.toBeInTheDocument();
+  });
+
+  it('zeigt während der Jagd nur Zonen mit eingeteilten Personen', () => {
+    const zones = [{ id: 'z-a' }, { id: 'z-b' }, { id: 'z-c' }];
+    const people = [
+      { id: 'p1', zoneId: 'z-a' },
+      { id: 'p2', zoneId: null },
+    ];
+    const extras = [
+      { id: 'e1', participantId: 'p2', zoneId: 'z-c', phaseId: 'ph1' },
+      { id: 'e2', participantId: 'p2', zoneId: 'z-b', phaseId: 'ph2' },
+    ];
+    expect(assignedZones(zones, people, extras, 'ph1').map((z) => z.id)).toEqual(['z-a', 'z-c']);
+    expect(assignedZones(zones, people, extras, 'ph2').map((z) => z.id)).toEqual(['z-a', 'z-b']);
+    // Niemand eingeteilt: alle Zonen bleiben sichtbar.
+    expect(assignedZones(zones, [{ id: 'p1', zoneId: null }], [], null)).toEqual(zones);
+  });
+
+  it('laufende Jagd: Legende nur mit zugeteilten Zonen, in der Planung alle', async () => {
+    const s = setup('member');
+    const me = s.hunts.participantList.find((p) => p.userId === s.me)!;
+    me.zoneId = 'z-a';
+    s.hunts.hunts[0]!.status = 'laufend';
+    renderApp(`/jagd/${s.huntId}`, s);
+    const legend = await screen.findByRole('list', { name: 'Legende' });
+    expect(within(legend).getAllByRole('listitem')).toHaveLength(1);
+    expect(within(legend).getByText('Treiben Eichenhang')).toBeInTheDocument();
+  });
+
+  it('Planung sieht in der Legende alle Zonen', async () => {
+    const s = setup();
+    s.hunts.participantList.find((p) => p.userId === 'u-tom')!.zoneId = 'z-a';
+    renderApp(`/jagd/${s.huntId}`, s);
+    const legend = await screen.findByRole('list', { name: 'Legende' });
+    expect(within(legend).getAllByRole('listitem')).toHaveLength(3);
   });
 
   it('ohne Migration 0018 bleibt es bei einer Zone', async () => {

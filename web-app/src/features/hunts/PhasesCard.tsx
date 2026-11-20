@@ -1,5 +1,5 @@
 // Phasen einer Jagd (Migration 0016): Abschnitte mit eigener Zuteilung von Ständen und Zonen.
-import { ChevronRight, Layers, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, ChevronRight, Layers, PencilLine, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { Badge, Button, Card, CollapsibleCard, ConfirmButton } from '../../components/ui';
 import { FormError } from '../../components/form';
@@ -34,6 +34,7 @@ export function PhasesCard({
   actions: HuntActions;
 }) {
   const [planning, setPlanning] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ id: string; name: string } | null>(null);
   const sorted = sortPhases(phases);
   const current = sorted.find((p) => p.id === hunt.currentPhaseId) ?? null;
   const next = nextPhase(sorted, hunt.currentPhaseId);
@@ -44,7 +45,13 @@ export function PhasesCard({
 
   const add = () =>
     actions.addPhase.mutate({ phases: sorted, currentPhaseId: hunt.currentPhaseId, participants, assignments, extras }, { onSuccess: (p) => sorted.length > 0 && setPlanning((p as Phase).id) });
-  const error = errorText(actions.addPhase.error) ?? errorText(actions.activatePhase.error) ?? errorText(actions.removePhase.error) ?? errorText(actions.setAssignment.error) ?? errorText(actions.setZones.error);
+  const error = errorText(actions.addPhase.error) ?? errorText(actions.activatePhase.error) ?? errorText(actions.removePhase.error) ?? errorText(actions.setAssignment.error) ?? errorText(actions.setZones.error) ?? errorText(actions.renamePhase.error) ?? errorText(actions.movePhase.error);
+  const saveName = () => {
+    if (!renaming) return;
+    const name = renaming.name.trim();
+    if (name.length === 0 || name.length > 60) return;
+    actions.renamePhase.mutate({ id: renaming.id, name }, { onSuccess: () => setRenaming(null) });
+  };
 
   return (
     <>
@@ -78,10 +85,57 @@ export function PhasesCard({
 
         {sorted.length > 0 && (
           <ul className="grid gap-2" aria-label="Phasen">
-            {sorted.map((p) => (
+            {sorted.map((p, i) => (
               <li key={p.id} className="flex flex-wrap items-center gap-2 border-b border-line pb-2 last:border-0 last:pb-0">
-                <span className="flex-1 font-medium">{p.name}</span>
+                {renaming?.id === p.id ? (
+                  <form
+                    className="flex w-full flex-wrap items-center gap-2"
+                    onSubmit={(e) => {
+                      e.preventDefault();
+                      saveName();
+                    }}
+                  >
+                    <input
+                      aria-label={`Neuer Name für ${p.name}`}
+                      value={renaming.name}
+                      maxLength={60}
+                      autoFocus
+                      onChange={(e) => setRenaming({ id: p.id, name: e.target.value })}
+                      className="min-h-10 flex-1 rounded-xl border border-line bg-surface px-3 text-sm"
+                    />
+                    <Button type="submit" disabled={actions.renamePhase.isPending || renaming.name.trim().length === 0}>
+                      Speichern
+                    </Button>
+                    <Button variant="secondary" onClick={() => setRenaming(null)}>
+                      Abbrechen
+                    </Button>
+                  </form>
+                ) : (
+                  <span className="flex-1 font-medium">{p.name}</span>
+                )}
                 {p.id === hunt.currentPhaseId && <Badge tone="primary">aktiv</Badge>}
+                {perms.canManage && renaming?.id !== p.id && (
+                  <>
+                    <Button variant="secondary" aria-label={`${p.name} umbenennen`} onClick={() => setRenaming({ id: p.id, name: p.name })}>
+                      <PencilLine aria-hidden className="size-4" />
+                    </Button>
+                    {sorted.length > 1 && (
+                      <>
+                        <Button variant="secondary" aria-label={`${p.name} nach oben`} disabled={i === 0 || actions.movePhase.isPending} onClick={() => actions.movePhase.mutate({ phases: sorted, id: p.id, by: -1 })}>
+                          <ArrowUp aria-hidden className="size-4" />
+                        </Button>
+                        <Button
+                          variant="secondary"
+                          aria-label={`${p.name} nach unten`}
+                          disabled={i === sorted.length - 1 || actions.movePhase.isPending}
+                          onClick={() => actions.movePhase.mutate({ phases: sorted, id: p.id, by: 1 })}
+                        >
+                          <ArrowDown aria-hidden className="size-4" />
+                        </Button>
+                      </>
+                    )}
+                  </>
+                )}
                 {perms.canManage && p.id !== hunt.currentPhaseId && (
                   <>
                     <Button variant="secondary" onClick={() => setPlanning(planning === p.id ? null : p.id)} aria-pressed={planning === p.id}>
@@ -116,7 +170,9 @@ export function PhasesCard({
           </div>
         )}
         {perms.canManage && current && (
-          <p className="text-xs text-muted">Änderungen an Ständen und Zonen weiter unten gelten für die aktive Phase. Andere Phasen planst du über „Planen“.</p>
+          <p className="text-xs text-muted">
+            Änderungen an Ständen und Zonen weiter unten gelten sofort für die aktive Phase, auch während der Jagd. Andere Phasen planst du über „Planen“. Eine neue Phase übernimmt die Zuteilung der aktiven Phase; für eine Zwischenphase (z. B. „Phase 1,5“) neue Phase hinzufügen, umbenennen, mit den Pfeilen an die richtige Stelle schieben und nur die Personen ändern, die versetzt werden.
+          </p>
         )}
         <FormError message={error} />
       </CollapsibleCard>

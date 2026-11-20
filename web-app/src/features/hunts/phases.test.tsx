@@ -62,6 +62,41 @@ describe('Phasen', () => {
     expect(anna.standId).toBe(s.s1);
   });
 
+  it('legt eine Zwischenphase 1,5 an: Kopie der aktiven Phase, umbenannt und vor Phase 2 geschoben', async () => {
+    const s = setup();
+    renderApp(`/jagd/${s.huntId}`, s);
+    await userEvent.click(await screen.findByRole('button', { name: 'Phasen nutzen' }));
+    expect(await screen.findByText('Aktiv: Phase 1 (1 von 1)')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Phase hinzufügen' }));
+    await screen.findByRole('list', { name: 'Zuteilung Phase 2' });
+    await userEvent.click(screen.getByRole('button', { name: 'Fertig' }));
+    await userEvent.click(screen.getByRole('button', { name: 'Phase hinzufügen' }));
+    await screen.findByRole('list', { name: 'Zuteilung Phase 3' });
+    await userEvent.click(screen.getByRole('button', { name: 'Fertig' }));
+
+    // Phase 3 heißt jetzt „Phase 1,5“ …
+    await userEvent.click(screen.getByRole('button', { name: 'Phase 3 umbenennen' }));
+    const input = screen.getByLabelText('Neuer Name für Phase 3');
+    await userEvent.clear(input);
+    await userEvent.type(input, 'Phase 1,5');
+    await userEvent.click(screen.getByRole('button', { name: 'Speichern' }));
+    await screen.findByRole('button', { name: 'Phase 1,5 nach oben' });
+    // … und kommt vor Phase 2.
+    await userEvent.click(screen.getByRole('button', { name: 'Phase 1,5 nach oben' }));
+    await waitFor(() =>
+      expect(within(screen.getByRole('list', { name: 'Phasen' })).getAllByRole('listitem').map((li) => li.textContent)).toEqual([
+        expect.stringContaining('Phase 1'),
+        expect.stringContaining('Phase 1,5'),
+        expect.stringContaining('Phase 2'),
+      ]),
+    );
+    expect(screen.getByRole('button', { name: 'Weiter zu Phase 1,5' })).toBeInTheDocument();
+    // Die Zwischenphase startet mit der Zuteilung von Phase 1.
+    const anna = s.hunts.participantList.find((p) => p.userId === 'u-anna')!;
+    const p15 = s.hunts.phaseList.find((p) => p.name === 'Phase 1,5')!;
+    expect(s.hunts.assignmentList.find((a) => a.phaseId === p15.id && a.participantId === anna.id)?.standId).toBe(s.s1);
+  });
+
   it('zeigt Schützen die aktive Phase ohne Leitungsknöpfe', async () => {
     const s = setup('member');
     const phase: Phase = { id: 'ph-1', huntId: s.huntId, name: 'Phase 1', sortOrder: 1 };

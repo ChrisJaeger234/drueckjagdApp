@@ -25,7 +25,7 @@ import { RevierWaypointsCard, StandCategorySelect, StandFromWaypointCard } from 
 import { formatHuntTime } from './format';
 import { ParticipantsCard, ReportsCard, StandsCard, ZonesCard, MyParticipation, ReportButtons } from './huntSections';
 import { StatusBadge } from './HuntList';
-import { huntPermissions, isOpenFollowUp, livePermissions, ZONE_KINDS, zoneColor, zoneIdsOf, hidesStandNames, type Hunt, type ZoneKind } from './huntModel';
+import { assignedZones, huntPermissions, isOpenFollowUp, livePermissions, ZONE_KINDS, zoneColor, zoneIdsOf, hidesStandNames, type Hunt, type ZoneKind } from './huntModel';
 import { useHunt, useHuntActions, useHuntDetails, useHuntPositions } from './useHunts';
 import { LiveCard, liveMarkers } from '../live/LiveCard';
 import { huntImportFrom } from './huntImport';
@@ -54,7 +54,7 @@ const IMPORT_ACCEPT = '.kml,.kmz,.gpx,.geojson,.json,application/vnd.google-eart
 function HuntView({ hunt }: { hunt: Hunt }) {
   const user = useUser();
   const { data: mine } = useMyGroup(hunt.groupId);
-  const { participants, stands, zones, reports, phases, assignments, extraZones } = useHuntDetails(hunt.id);
+  const { participants, stands, zones, reports, phases, assignments, extraZones } = useHuntDetails(hunt.id, hunt.status === 'laufend');
   const actions = useHuntActions(hunt.id);
   const navigate = useNavigate();
   const revierIds = useMemo(() => (hunt.revierId ? [hunt.revierId] : []), [hunt.revierId]);
@@ -123,6 +123,11 @@ function HuntView({ hunt }: { hunt: Hunt }) {
   }
 
   const hideStandNames = !perms.canManage && hidesStandNames(me?.role ?? null);
+  // Während der Jagd nur Zonen, in denen in der aktiven Phase jemand eingeteilt ist; in der Planung alle.
+  const shownZones = useMemo(
+    () => (hunt.status === 'laufend' ? assignedZones(zoneList, people, extras ?? [], hunt.currentPhaseId ?? null) : zoneList),
+    [hunt.status, zoneList, people, extras, hunt.currentPhaseId],
+  );
   const currentPhase = (phases.data ?? []).find((p) => p.id === hunt.currentPhaseId) ?? null;
   // Einrichtungen des Reviers, die in dieser Jagd noch kein Stand sind.
   const freeWaypoints = useMemo(() => revierWaypoints.filter((w) => !standList.some((s) => s.waypointId === w.id)), [revierWaypoints, standList]);
@@ -153,10 +158,10 @@ function HuntView({ hunt }: { hunt: Hunt }) {
   );
   const areas = useMemo(
     () => [
-      ...zoneList.map((z) => ({ id: z.id, geometry: z.geometry, color: zoneColor(z), highlight: myZoneIds.includes(z.id) })),
+      ...shownZones.map((z) => ({ id: z.id, geometry: z.geometry, color: zoneColor(z), highlight: myZoneIds.includes(z.id) })),
       ...(importing?.zones ?? []).filter((z) => z.use).map((z) => ({ id: `import-${z.key}`, geometry: z.geometry, color: zoneColor(z) })),
     ],
-    [zoneList, importing, myZoneIds],
+    [shownZones, importing, myZoneIds],
   );
   const fit = useMemo(
     () =>
@@ -292,7 +297,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
           onMapClick={onMapClick}
           onMarkerClick={onMarkerClick}
         />
-        {mode.kind === 'view' && <ZoneLegend zones={zoneList} people={people} extras={extras ?? []} phase={currentPhase} viewer={me} myZoneIds={myZoneIds} />}
+        {mode.kind === 'view' && <ZoneLegend zones={shownZones} people={people} extras={extras ?? []} phase={currentPhase} viewer={me} myZoneIds={myZoneIds} />}
 
         {mode.kind === 'stand' && (
           <Card className="grid gap-3">
@@ -422,7 +427,7 @@ function HuntView({ hunt }: { hunt: Hunt }) {
             error={actions.importMap.error}
           />
         )}
-        <ZonesCard zones={zoneList} perms={perms} actions={actions} />
+        <ZonesCard zones={perms.canManage ? zoneList : shownZones} perms={perms} actions={actions} />
         <ParticipantsCard hunt={hunt} participants={people} stands={standList} zones={zoneList} extras={extras} perms={perms} actions={actions} userId={user.id} />
         {perms.canManage && (hunt.status === 'laufend' || hunt.status === 'beendet') && (
           <HuntSummaryCard hunt={hunt} reports={reportList} participants={people} stands={standList} />

@@ -24,18 +24,24 @@ export function useGroupHunts(groupId: string) {
 
 export function useHunt(huntId: string) {
   const { hunts } = useServices();
-  return useQuery({ queryKey: huntKeys.one(huntId), queryFn: () => hunts.get(huntId) });
+  // Läuft die Jagd, regelmäßig nachladen, damit ein Phasenwechsel ohne Neuladen ankommt.
+  return useQuery({ queryKey: huntKeys.one(huntId), queryFn: () => hunts.get(huntId), refetchInterval: (q) => (q.state.data?.status === 'laufend' ? LIVE_REFRESH_MS : false) });
 }
 
-export function useHuntDetails(huntId: string) {
+/** Wie oft während der laufenden Jagd Zuteilung, Zonen und Meldungen nachgeladen werden. */
+export const LIVE_REFRESH_MS = 30_000;
+
+/** `live`: Jagd läuft, alles alle 30 s nachladen (z. B. neue Zonen für Treiber, neue Meldungen). */
+export function useHuntDetails(huntId: string, live = false) {
   const { hunts } = useServices();
-  const participants = useQuery({ queryKey: huntKeys.part(huntId, 'participants'), queryFn: () => hunts.participants(huntId) });
-  const stands = useQuery({ queryKey: huntKeys.part(huntId, 'stands'), queryFn: () => hunts.stands(huntId) });
-  const zones = useQuery({ queryKey: huntKeys.part(huntId, 'zones'), queryFn: () => hunts.zones(huntId) });
-  const reports = useQuery({ queryKey: huntKeys.part(huntId, 'reports'), queryFn: () => hunts.reports(huntId) });
-  const phases = useQuery({ queryKey: huntKeys.part(huntId, 'phases'), queryFn: () => hunts.phases(huntId) });
-  const assignments = useQuery({ queryKey: huntKeys.part(huntId, 'assignments'), queryFn: () => hunts.assignments(huntId) });
-  const extraZones = useQuery({ queryKey: huntKeys.part(huntId, 'extraZones'), queryFn: () => hunts.extraZones(huntId) });
+  const refetchInterval = live ? LIVE_REFRESH_MS : false;
+  const participants = useQuery({ queryKey: huntKeys.part(huntId, 'participants'), queryFn: () => hunts.participants(huntId), refetchInterval });
+  const stands = useQuery({ queryKey: huntKeys.part(huntId, 'stands'), queryFn: () => hunts.stands(huntId), refetchInterval });
+  const zones = useQuery({ queryKey: huntKeys.part(huntId, 'zones'), queryFn: () => hunts.zones(huntId), refetchInterval });
+  const reports = useQuery({ queryKey: huntKeys.part(huntId, 'reports'), queryFn: () => hunts.reports(huntId), refetchInterval });
+  const phases = useQuery({ queryKey: huntKeys.part(huntId, 'phases'), queryFn: () => hunts.phases(huntId), refetchInterval });
+  const assignments = useQuery({ queryKey: huntKeys.part(huntId, 'assignments'), queryFn: () => hunts.assignments(huntId), refetchInterval });
+  const extraZones = useQuery({ queryKey: huntKeys.part(huntId, 'extraZones'), queryFn: () => hunts.extraZones(huntId), refetchInterval });
   return { participants, stands, zones, reports, phases, assignments, extraZones };
 }
 
@@ -161,6 +167,18 @@ export function useHuntActions(huntId: string) {
       ),
     ),
     removePhase: useMutation(m((phaseId: string) => hunts.removePhase(phaseId))),
+    renamePhase: useMutation(m(({ id, name }: { id: string; name: string }) => hunts.updatePhase(id, { name }))),
+    /** Phase eine Stelle nach oben (-1) oder unten (+1) schieben; nummeriert danach alle 1, 2, 3 … durch. */
+    movePhase: useMutation(
+      m(async ({ phases, id, by }: { phases: Phase[]; id: string; by: -1 | 1 }) => {
+        const list = sortPhases(phases);
+        const i = list.findIndex((p) => p.id === id);
+        const j = i + by;
+        if (i < 0 || j < 0 || j >= list.length) return;
+        [list[i], list[j]] = [list[j]!, list[i]!];
+        for (const [k, p] of list.entries()) if (p.sortOrder !== k + 1) await hunts.updatePhase(p.id, { sortOrder: k + 1 });
+      }),
+    ),
     activatePhase: useMutation(m((phaseId: string) => hunts.activatePhase(huntId, phaseId))),
     setAssignment: useMutation(m((a: PhaseAssignment) => hunts.setAssignment(huntId, a))),
   };

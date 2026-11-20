@@ -551,3 +551,13 @@ export function zoneIdsOf(mainZoneId: string | null, extras: ExtraZone[], partic
   const unique = [...new Set(ids)];
   return zones ? unique.filter((id) => zones.some((z) => z.id === id)) : unique;
 }
+
+/**
+ * Zonen, die während der Jagd gezeigt werden: nur die, in denen in dieser Phase jemand eingeteilt ist.
+ * Ist niemand einer Zone zugeteilt (Jagd ohne Zonen-Einteilung), bleiben alle sichtbar.
+ */
+export function assignedZones<Z extends Pick<Zone, 'id'>>(zones: Z[], people: Pick<Participant, 'id' | 'zoneId'>[], extras: ExtraZone[], phaseId: string | null): Z[] {
+  const used = new Set(people.flatMap((p) => zoneIdsOf(p.zoneId, extras, p.id, phaseId)));
+  const shown = zones.filter((z) => used.has(z.id));
+  return shown.length > 0 ? shown : zones;
+}

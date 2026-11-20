@@ -93,6 +93,8 @@ export interface HuntsService {
   assignments(huntId: string): Promise<PhaseAssignment[]>;
   createPhase(huntId: string, input: { name: string; sortOrder: number }): Promise<Phase>;
   removePhase(phaseId: string): Promise<void>;
+  /** Name oder Reihenfolge einer Phase ändern. */
+  updatePhase(phaseId: string, patch: { name?: string; sortOrder?: number }): Promise<void>;
   /** Schaltet die Phase aktiv und übernimmt ihre Zuteilung für alle Teilnehmer. */
   activatePhase(huntId: string, phaseId: string): Promise<void>;
   setAssignment(huntId: string, a: PhaseAssignment): Promise<void>;
@@ -225,6 +227,13 @@ export function createSupabaseHuntsService(client: SupabaseClient): HuntsService
         phaseFromRow(unwrap(await client.from('hunt_phases').insert({ hunt_id: huntId, name: name.trim(), sort_order: sortOrder }).select(PHASE_COLUMNS).single<PhaseRow>())),
       ),
     removePhase: (phaseId) => guard(() => deleteOne('hunt_phases', phaseId)),
+    updatePhase: (phaseId, { name, sortOrder }) =>
+      guard(() =>
+        updateOne('hunt_phases', phaseId, {
+          ...(name !== undefined ? { name: name.trim() } : {}),
+          ...(sortOrder !== undefined ? { sort_order: sortOrder } : {}),
+        }),
+      ),
     activatePhase: (huntId, phaseId) => guard(async () => check(await client.rpc('activate_hunt_phase', { p_hunt_id: huntId, p_phase_id: phaseId }))),
     setAssignment: (huntId, a) =>
       guard(async () => {
