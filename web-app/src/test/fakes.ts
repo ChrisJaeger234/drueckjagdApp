@@ -529,6 +529,13 @@ export class FakeHunts implements HuntsService {
     this.phaseList.push(p);
     return clone(p);
   }
+  async updatePhase(phaseId: string, { name, sortOrder }: { name?: string; sortOrder?: number }) {
+    const p = this.phaseList.find((x) => x.id === phaseId);
+    if (!p) return;
+    this.requireManage(p.huntId);
+    if (name !== undefined) p.name = name.trim();
+    if (sortOrder !== undefined) p.sortOrder = sortOrder;
+  }
   async removePhase(phaseId: string) {
     const p = this.phaseList.find((x) => x.id === phaseId);
     if (p) this.requireManage(p.huntId);

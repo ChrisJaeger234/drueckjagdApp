@@ -15,6 +15,7 @@ import {
   ZonesCard,
 } from "./huntSections";
 import {
+  assignedZones,
   HUNT_ROLES,
   huntPermissions,
   ZONE_KINDS,
@@ -118,7 +119,9 @@ export function HuntPreview({
       hideLabel: hidesStandNames(viewer.role) && s.id !== viewer.standId,
     };
   });
-  const areas = zones.map((z) => ({
+  // Wie während der Jagd: nur Zonen, in denen in der aktiven Phase jemand eingeteilt ist.
+  const shownZones = assignedZones(zones, people, extras, hunt.currentPhaseId ?? null);
+  const areas = shownZones.map((z) => ({
     id: z.id,
     geometry: z.geometry,
     color: zoneColor(z),
@@ -215,7 +218,7 @@ export function HuntPreview({
         position={position.status === "ok" ? position.position : null}
       />
       <ZoneLegend
-        zones={zones}
+        zones={shownZones}
         people={people}
         extras={extras}
         phase={phase}
@@ -229,7 +232,7 @@ export function HuntPreview({
         perms={perms}
         actions={actions}
       />
-      <ZonesCard zones={zones} perms={perms} actions={actions} />
+      <ZonesCard zones={shownZones} perms={perms} actions={actions} />
       <ReportsCard
         reports={reports}
         stands={stands}
